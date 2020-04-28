@@ -69,9 +69,9 @@ def progress(bot_dir,max_avg):
     
 def hist(bot_dir,max_avg):
     with np.load(base_path + bot_dir + r'\{}\stat_arr.npz'.format(max_avg[1]),allow_pickle = True) as stats:
-        plt.hist(stats['stats'],bins = 50)
+        stats_array = stats['stats']
+        plt.hist(stats_array,bins = int(abs(min(stats_array) - max(stats_array))/10))
         plt.show()
-    
 	
 
 

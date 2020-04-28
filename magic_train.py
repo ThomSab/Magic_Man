@@ -33,7 +33,6 @@ current_pool = None
 highestranking = None  
 pool_size = 100
 learning_rate = float(bot_dir.split('_')[-1])
-n_clones = 0
 kill_bool = 1
 kill_margin = -15
 pool_size_limit = 500
@@ -179,6 +178,8 @@ def refresh_max_avg_score(bot_directory = bot_dir,integrity_check = True,attempt
                     shutil.rmtree(base_path + bot_dir + r'\{}'.format(bot_id))
                     print('Bot {} incinerated'.format(bot_id))
                     return ('INCINERATE',bot_id)
+            except OSError: 
+                print("OSError in {}".format(bot_id))
         else:
             with np.load(path + '\\' + bot_id + '\stat_arr.npz',allow_pickle = True) as stats:
                 stats = stats['stats']
@@ -299,7 +300,7 @@ def match(tuple_arg,dictionary = None):
 
 
 
-def training_session(pool_size = pool_size,learning_rate = learning_rate, n_clones = n_clones,entire_dir_bool = True):
+def training_session(pool_size = pool_size,learning_rate = learning_rate, n_clones = 0,entire_dir_bool = True):
     refresh_player_serial_number()
     current_pool = load_pool(pool_size)
     for _ in range(1):
@@ -319,6 +320,10 @@ def training_session(pool_size = pool_size,learning_rate = learning_rate, n_clon
             print(' '+'_'*100)
             print('|'*int(np.round(progress)+1) + '_'*int(np.round(100-progress))+'|')
             print("{} %".format(np.round(progress,decimals=1)))
+            if n_clones > 0:
+                print("Non-Cloning Session")
+            elif n_clones == 0:
+                print("Cloning Session")
             if entire_dir_bool:
                 for player in current_pool:
                     np.savez(player.player_dir + r'\stat_arr.npz',stats = np.array(entire_dir[player.id]))
