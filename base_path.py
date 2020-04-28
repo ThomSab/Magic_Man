@@ -1,6 +1,6 @@
 import os
 
-base_path = r'C:\Users\jaspe\Desktop\Magic_Man'
+base_path = r'C:\Users\X250\Magic_Man'
 dirlist = [_ if "Bots_" in _ else None for _ in os.listdir(base_path)]
 while None in dirlist:
 	for _ in dirlist:

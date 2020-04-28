@@ -65,7 +65,7 @@ class Player:
 
         if not os.path.exists(self.path):
             os.mkdir(self.path)
-            self.bid_net        = Network(self,load = False,arg = 'bid',        layers = [89,30,1],init_sigma=self.init_sigma) #network architecture changed from [90,30,30,1]
+            self.bid_net        = Network(self,load = False,arg = 'bid',        layers = [89,30,1]  ,init_sigma=self.init_sigma) #network architecture changed from [90,30,30,1]
             self.progress_net   = Network(self,load = False,arg = 'progress',   layers = [160,30,10],init_sigma=self.init_sigma)
             self.play_net       = Network(self,load = False,arg = 'play',       layers = [160,30,60],init_sigma=self.init_sigma)
             

@@ -223,8 +223,9 @@ class Game:
                 player.info_bid[23:29]		  = [[1] if _ == self.trump else [0] for _ in range(6)] #which color is currently trump
 
                 player.info_bid[29:(29+60)]   = [ [1] if card in player.cards else [0] for card in deck.deck  ]
-					
-                self.bids.append([player.bid(self.current_round)])
+				
+                last_player_bool = (True if self.players.index(player) ==  3 else False)
+                self.bids.append([player.bid(self.current_round,last_player = last_player_bool)])
                 print('bid {} is '.format(player),player.current_bid,'\n')
             #____________________________________________________
             #bid estimation Humans
@@ -289,10 +290,10 @@ def play_game(game_pool):
         player.game_score = 0
     for i in range(1,16): #how many rounds
         if not i == 15:
-            game.players.rotate(game.players.index(game_pool_copy[i%4]))
+            game.starting_player(game_pool_copy[i%4])
             game.round(i)
         else:
-            game.players.rotate(game.players.index(game_pool_copy[15%4]))
+            game.starting_player(game_pool_copy[15%4])
             game.round(i,lastround = True)
             
     winnerlist = list( game.players.copy() )

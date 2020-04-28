@@ -36,7 +36,7 @@ learning_rate = float(bot_dir.split('_')[-1])
 kill_bool = 1
 kill_margin = -15
 pool_size_limit = 500
-create_initial_pool_bool = False
+create_initial_pool_bool = True
 
 def load_pool (pool_size):
     integrity_check = refresh_max_avg_score(integrity_check = True)
@@ -81,10 +81,10 @@ def play_game(game_pool):
         player.game_score = 0
     for i in range(1,16): #how many rounds
         if not i == 15:
-            game.players.rotate(game.players.index(game_pool_copy[i%4]))
+            game.starting_player(game_pool_copy[i%4])
             game.round(i)
         else:
-            game.players.rotate(game.players.index(game_pool_copy[15%4]))
+            game.starting_player(game_pool_copy[15%4])
             game.round(i,lastround = True)
             
     winnerlist = list( game.players.copy() )
