@@ -65,9 +65,9 @@ class Player:
 
         if not os.path.exists(self.path):
             os.mkdir(self.path)
-            self.bid_net        = Network(self,load = False,arg = 'bid',        layers = [89,30,1]  ,init_sigma=self.init_sigma) #network architecture changed from [90,30,30,1]
-            self.progress_net   = Network(self,load = False,arg = 'progress',   layers = [160,30,10],init_sigma=self.init_sigma)
-            self.play_net       = Network(self,load = False,arg = 'play',       layers = [160,30,60],init_sigma=self.init_sigma)
+            self.bid_net        = Network(self,load = False,arg = 'bid',        layers = [89,59,1]  ,init_sigma=self.init_sigma) #network architecture changed from [90,30,30,1]
+            self.progress_net   = Network(self,load = False,arg = 'progress',   layers = [160,59,10],init_sigma=self.init_sigma)
+            self.play_net       = Network(self,load = False,arg = 'play',       layers = [160,59,60],init_sigma=self.init_sigma)
             
             np.savez(self.player_dir + r'\stat_arr.npz',stats = np.array([init_score for _ in range(100)]))
             np.savez(self.player_dir + r'\stat_arr_avg.npz',avgscore = np.array([init_score]))

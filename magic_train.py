@@ -36,7 +36,7 @@ learning_rate = float(bot_dir.split('_')[-1])
 kill_bool = 1
 kill_margin = -15
 pool_size_limit = 500
-create_initial_pool_bool = True
+create_initial_pool_bool = False
 
 def load_pool (pool_size):
     integrity_check = refresh_max_avg_score(integrity_check = True)
@@ -300,7 +300,7 @@ def match(tuple_arg,dictionary = None):
 
 
 
-def training_session(pool_size = pool_size,learning_rate = learning_rate, n_clones = 0,entire_dir_bool = True):
+def training_session(pool_size = pool_size,learning_rate = learning_rate, n_clones = 0,entire_dir_bool = True,session = '_'):
     refresh_player_serial_number()
     current_pool = load_pool(pool_size)
     for _ in range(1):
@@ -321,9 +321,9 @@ def training_session(pool_size = pool_size,learning_rate = learning_rate, n_clon
             print('|'*int(np.round(progress)+1) + '_'*int(np.round(100-progress))+'|')
             print("{} %".format(np.round(progress,decimals=1)))
             if n_clones > 0:
-                print("Non-Cloning Session")
+                print("Cloning Session ({})".format(session))
             elif n_clones == 0:
-                print("Cloning Session")
+                print("Non-Cloning Session ({})".format(session))
             if entire_dir_bool:
                 for player in current_pool:
                     np.savez(player.player_dir + r'\stat_arr.npz',stats = np.array(entire_dir[player.id]))
@@ -361,7 +361,7 @@ if __name__ == "__main__": #so it doesnt run when imported
 
 
     while True:
-        kill_count_down = 0
+        kill_count_down = 5
         killed_and_cloned = False
         while not killed_and_cloned and kill_count_down >= 0:#try:
             if kill_count_down == 0:
@@ -369,10 +369,10 @@ if __name__ == "__main__": #so it doesnt run when imported
                 refresh_max_avg_score(progress_bool = True)
                 resize_full_pool(full_pool_size = pool_size_limit)
                 killed_and_cloned = True
-                training_session(n_clones = 50)
+                training_session(n_clones = 50,session = kill_count_down)
             else:
                 print('Kill Countdown is at', kill_count_down)
-                training_session()
+                training_session(session = kill_count_down)
                 kill_count_down -= 1
             #except Exception as exc:
             #    print('Training session failed. \n {}'.format(exc))

@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import math
 import os
 import scipy.stats
+import scipy.optimize
 from magic_man_player import Player 
 from base_path import base_path,lr,bot_dir,dirlist
 from magic_man_stats import mov_avg
@@ -17,6 +18,8 @@ def intermediate_rate(intermediate,color = 'r'):
     plt.plot(ids[-intermediate:],[ int(x)*slope + intercept for x in ids],color)
     print('The learning rate for the last {} Bots is {}'.format(intermediate,slope))
 
+def fit_func (x,a,b):
+    return a + b*np.log(x)
 
  
     
@@ -44,29 +47,34 @@ def brain(bot_dir,max_avg):
     plt.tight_layout()
     plt.show()
 
-def real_progress(bot_dir,max_avg):
+def real_progress(bot_dir,max_avg,prediction_scope=100):
     learning_rate = bot_dir.split('_')[-1]
     try:
         with np.load(base_path + r'\real_max_progress_{}.npz'.format(learning_rate),allow_pickle = True) as progress:
             progress = list(progress['progress'])
-            slope,intercept,r,p,std = scipy.stats.linregress(range(len(progress))[1:],progress[1:])
-            print('The real overall progress rate is {}.'.format(slope))
-            plt.plot([ int(x)*slope + intercept for x in range(len(progress))],'k--')
-            plt.plot(progress,color = 'k')
+            #slope,intercept,r,p,std = scipy.stats.linregress(range(len(progress))[1:],progress[1:])
+            #print('The real overall progress rate is {}.'.format(slope))
+            #plt.plot([ int(x)*slope + intercept for x in range(len(progress))],'k--')
+            params, param_cov = scipy.optimize.curve_fit(fit_func,range(len(progress))[1:],progress[1:])
+            print("At this rate Maximum Average is expected to be at {} in {} generations.".format(fit_func(len(progress)+prediction_scope,params[0],params[1]),prediction_scope))
+            plt.plot([fit_func(x,params[0],params[1]) for x in range(len(progress))[1:]],color='k')
+            plt.plot(progress,color = 'k--')
             plt.show()
     except:
-        print("Real Progress Failed.")
+        with Exception as excep:
+            print("Real Progress Failed: {}".format(excep))
     
 def progress(bot_dir,max_avg):
     learning_rate = bot_dir.split('_')[-1]
     with np.load(base_path + r'\max_progress_{}.npz'.format(learning_rate),allow_pickle = True) as progress:
-        progress = list(progress['progress'])
-        slope,intercept,r,p,std = scipy.stats.linregress(range(len(progress))[1:],progress[1:])
-        print('The overall progress rate is {}.'.format(slope))
-        plt.plot([ int(x)*slope + intercept for x in range(len(progress))],'k--')
-        plt.plot(progress,color = 'k')
-        plt.show()    
-    
+        #progress = list(progress['progress'])
+        #slope,intercept,r,p,std = scipy.stats.linregress(range(len(progress))[1:],progress[1:])
+        #print('The overall progress rate is {}.'.format(slope))
+        params, param_cov = scipy.optimize.curve_fit(fit_func,range(len(progress))[1:],progress[1:])
+        plt.plot([fit_func(x,params[0],params[1]) for x in range(len(progress))[1:]],color='k')
+        plt.plot(progress,color = 'k--')
+        plt.show()   
+ 
 def hist(bot_dir,max_avg):
     with np.load(base_path + bot_dir + r'\{}\stat_arr.npz'.format(max_avg[1]),allow_pickle = True) as stats:
         stats_array = stats['stats']
@@ -115,7 +123,6 @@ if __name__ == "__main__":
 				for _ in range(len(statistics)):
 					print("[",_,"]  ",statistics[_])
 				print("[",len(statistics),"]  ","Access different learning Rate")
-				print("[",len(statistics)+1,"]  ","Exit")
 				stat_answer  = input("\n")
 				try:
 					stat_idx = int(stat_answer)
