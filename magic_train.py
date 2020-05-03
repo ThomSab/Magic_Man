@@ -31,7 +31,7 @@ to prevent the bots from taking up disk space
 """
 current_pool = None
 highestranking = None  
-pool_size = 100
+pool_size = 200
 learning_rate = float(bot_dir.split('_')[-1])
 kill_bool = 1
 kill_margin = -15
@@ -156,6 +156,7 @@ def refresh_player_serial_number():
 
 def refresh_max_avg_score(bot_directory = bot_dir,integrity_check = True,attempts = 3,progress_bool = False):
     print("Refreshing Maximum Average Score")
+    learning_rate = float(bot_directory.split('_')[-1])
     path = base_path + bot_directory
     dirlist = os.listdir(path)
     dirlist.remove('player_serial_number.txt')
@@ -321,9 +322,9 @@ def training_session(pool_size = pool_size,learning_rate = learning_rate, n_clon
             print('|'*int(np.round(progress)+1) + '_'*int(np.round(100-progress))+'|')
             print("{} %".format(np.round(progress,decimals=1)))
             if n_clones > 0:
-                print("Cloning Session ({})".format(session))
+                print("Cloning Session")
             elif n_clones == 0:
-                print("Non-Cloning Session ({})".format(session))
+                print("Non-Cloning Session ({} more after this)".format(session))
             if entire_dir_bool:
                 for player in current_pool:
                     np.savez(player.player_dir + r'\stat_arr.npz',stats = np.array(entire_dir[player.id]))
@@ -332,12 +333,13 @@ def training_session(pool_size = pool_size,learning_rate = learning_rate, n_clon
     refresh_success  = False
     while refresh_attempts <= 3 and not refresh_success:
         try:
-            max_avgscore_tuple = refresh_max_avg_score()
+            max_avgscore_tuple = refresh_max_avg_score(progress_bool = (True if n_clones > 0 else False))
             refresh_success    = True
         except:
             print('Attempt {} failed to refresh maximum average score after training session finished.'.format(refresh_attempts))
             attempts += 1
-            
+    
+    
     print("Player {} has the maximum average score after the session and will be cloned.".format(max_avgscore_tuple[1]))
     clone_success = False
     clone_attempts = 0
@@ -361,15 +363,15 @@ if __name__ == "__main__": #so it doesnt run when imported
 
 
     while True:
-        kill_count_down = 5
+        kill_count_down = 1
         killed_and_cloned = False
         while not killed_and_cloned and kill_count_down >= 0:#try:
             if kill_count_down == 0:
                 print('Kill Countdown is at', kill_count_down)
-                refresh_max_avg_score(progress_bool = True)
+                refresh_max_avg_score()
                 resize_full_pool(full_pool_size = pool_size_limit)
                 killed_and_cloned = True
-                training_session(n_clones = 50,session = kill_count_down)
+                training_session(n_clones = 100,session = kill_count_down)
             else:
                 print('Kill Countdown is at', kill_count_down)
                 training_session(session = kill_count_down)

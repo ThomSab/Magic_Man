@@ -17,7 +17,7 @@ while not lr_given:
 	lr_answer  = input("\n")
 	try:
 		lr_idx = int(lr_answer)
-		if lr_idx > len(dirlist) or lr_idx < 0:
+		if lr_idx > (len(dirlist)-1) or lr_idx < 0:
 			print("DIR DOES NOT EXIST")
 		else:
 			lr = dirlist[lr_idx].split('_')[-1]

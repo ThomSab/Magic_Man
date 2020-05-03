@@ -95,13 +95,13 @@ class Player:
         #how high the player is currently bidding
         
         #wether he wants attempt to win the suit
-        self.info_progress = np.array([[0] for i in range(150)],dtype = float)
+        self.info_progress = np.array([[0] for i in range(160)],dtype = float)
         #infoblock for wether to attempt to win the suit
         self.current_progress = np.array([[0] for i in range(10)],dtype = float)
         #how much the player is expecting a turn to win
         
         #which card to play
-        self.info_cards = np.array([[0] for i in range(151)],dtype = float)
+        self.info_cards = np.array([[0] for i in range(160)],dtype = float)
         #infoblocks for which cards to play
 
 

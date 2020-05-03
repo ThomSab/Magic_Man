@@ -18,9 +18,11 @@ def intermediate_rate(intermediate,color = 'r'):
     plt.plot(ids[-intermediate:],[ int(x)*slope + intercept for x in ids],color)
     print('The learning rate for the last {} Bots is {}'.format(intermediate,slope))
 
-def fit_func (x,a,b):
-    return a + b*np.log(x)
+def linear_fit (x,a,b,c):
+    return a + b*x + c*np.log(x)
 
+def log_fit (x,a,b,c):
+    return a + c*np.log(x)
  
     
 def scatter_pool(bot_dir ,max_avg):
@@ -55,10 +57,17 @@ def real_progress(bot_dir,max_avg,prediction_scope=100):
             #slope,intercept,r,p,std = scipy.stats.linregress(range(len(progress))[1:],progress[1:])
             #print('The real overall progress rate is {}.'.format(slope))
             #plt.plot([ int(x)*slope + intercept for x in range(len(progress))],'k--')
-            params, param_cov = scipy.optimize.curve_fit(fit_func,range(len(progress))[1:],progress[1:])
-            print("At this rate Maximum Average is expected to be at {} in {} generations.".format(fit_func(len(progress)+prediction_scope,params[0],params[1]),prediction_scope))
-            plt.plot([fit_func(x,params[0],params[1]) for x in range(len(progress))[1:]],color='k')
-            plt.plot(progress,color = 'k--')
+            
+            linear_params, linear_param_cov = scipy.optimize.curve_fit(linear_fit,range(len(progress))[1:],progress[1:])
+            print("Assuming a linear growth component, Maximum Average is expected to be at {} in {} generations.".format(np.round(linear_fit(len(progress)+prediction_scope,linear_params[0],linear_params[1],linear_params[2]),decimals=2),prediction_scope))
+            plt.plot(range(len(progress)+prediction_scope)[1:],[linear_fit(x,linear_params[0],linear_params[1],linear_params[2]) for x in range(len(progress)+prediction_scope)[1:]],'b--',alpha = 0.5,label = 'Assuming linear growth')
+            
+            log_params, log_param_cov = scipy.optimize.curve_fit(log_fit,range(len(progress))[1:],progress[1:])
+            print("Assuming only logarithmic growth, Maximum Average is expected to be at {} in {} generations.".format(np.round(log_fit(len(progress)+prediction_scope,log_params[0],log_params[1],log_params[2]),decimals=2),prediction_scope))
+            plt.plot(range(len(progress)+prediction_scope)[1:],[log_fit(x,log_params[0],log_params[1],log_params[2]) for x in range(len(progress)+prediction_scope)[1:]],'r--',alpha = 0.5,label = 'Assuming logarithmic growth')
+            
+            plt.plot(range(len(progress)),progress,'k',alpha = 0.4)
+            plt.legend()
             plt.show()
     except:
         with Exception as excep:
@@ -67,12 +76,12 @@ def real_progress(bot_dir,max_avg,prediction_scope=100):
 def progress(bot_dir,max_avg):
     learning_rate = bot_dir.split('_')[-1]
     with np.load(base_path + r'\max_progress_{}.npz'.format(learning_rate),allow_pickle = True) as progress:
-        #progress = list(progress['progress'])
+        progress = list(progress['progress'])
         #slope,intercept,r,p,std = scipy.stats.linregress(range(len(progress))[1:],progress[1:])
         #print('The overall progress rate is {}.'.format(slope))
-        params, param_cov = scipy.optimize.curve_fit(fit_func,range(len(progress))[1:],progress[1:])
-        plt.plot([fit_func(x,params[0],params[1]) for x in range(len(progress))[1:]],color='k')
-        plt.plot(progress,color = 'k--')
+        params, param_cov = scipy.optimize.curve_fit(linear_fit,range(len(progress))[1:],progress[1:])
+        plt.plot([linear_fit(x,params[0],params[1],params[2]) for x in range(len(progress))[1:]],'k--')
+        plt.plot(progress,'b',alpha = 0.3)
         plt.show()   
  
 def hist(bot_dir,max_avg):
