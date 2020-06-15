@@ -21,6 +21,8 @@ Other Challenges include finding the optimal topology for the neural nets, optim
 Results from the currently implemented method have been good but do not reach the goal of matching a human player.
 While an average human player scores an average score of about 250 in any given game, the bots reach a maximum average score of about 60 before they stall out.
 
+![Figure_1](https://user-images.githubusercontent.com/64082072/84660928-db821500-af19-11ea-9e07-e9e3f1bcae35.png)
+
 ## Prospect
 
 The next step is to implement a NeuroEvolution of Augmenting Topologies (NEAT) algorithm.
