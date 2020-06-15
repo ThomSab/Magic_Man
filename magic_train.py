@@ -31,7 +31,7 @@ to prevent the bots from taking up disk space
 """
 current_pool = None
 highestranking = None  
-pool_size = 200
+pool_size = 100
 learning_rate = float(bot_dir.split('_')[-1])
 kill_bool = 1
 kill_margin = -15
@@ -230,9 +230,9 @@ def resize_full_pool(full_pool_size = 1500):
     oversize = len(avgscores) - full_pool_size
     if oversize > 0:
         avgscores.sort(key = lambda x: x[0])
-        for tuple in avgscores[:oversize]:
-            shutil.rmtree(base_path + bot_dir + r'\{}'.format(tuple[1]))
-            print('Bot {} incinerated.'.format(tuple[1]))
+        for bot_tuple in avgscores[:oversize]:
+            shutil.rmtree(base_path + bot_dir + r'\{}'.format(bot_tuple[1]))
+            print('Bot {} had a score of {} and was incinerated.'.format(bot_tuple[1],np.round(bot_tuple[0])))
     else:   
         print('Full pool has size {} and is not oversized'.format(len(avgscores)))
 
@@ -363,7 +363,7 @@ if __name__ == "__main__": #so it doesnt run when imported
 
 
     while True:
-        kill_count_down = 1
+        kill_count_down = 9
         killed_and_cloned = False
         while not killed_and_cloned and kill_count_down >= 0:#try:
             if kill_count_down == 0:
@@ -371,7 +371,7 @@ if __name__ == "__main__": #so it doesnt run when imported
                 refresh_max_avg_score()
                 resize_full_pool(full_pool_size = pool_size_limit)
                 killed_and_cloned = True
-                training_session(n_clones = 100,session = kill_count_down)
+                training_session(n_clones = 50,session = kill_count_down)
             else:
                 print('Kill Countdown is at', kill_count_down)
                 training_session(session = kill_count_down)

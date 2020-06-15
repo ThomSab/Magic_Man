@@ -49,7 +49,7 @@ def brain(bot_dir,max_avg):
     plt.tight_layout()
     plt.show()
 
-def real_progress(bot_dir,max_avg,prediction_scope=100):
+def real_progress(bot_dir,max_avg,prediction_scope=20):
     learning_rate = bot_dir.split('_')[-1]
     try:
         with np.load(base_path + r'\real_max_progress_{}.npz'.format(learning_rate),allow_pickle = True) as progress:
@@ -60,11 +60,14 @@ def real_progress(bot_dir,max_avg,prediction_scope=100):
             
             linear_params, linear_param_cov = scipy.optimize.curve_fit(linear_fit,range(len(progress))[1:],progress[1:])
             print("Assuming a linear growth component, Maximum Average is expected to be at {} in {} generations.".format(np.round(linear_fit(len(progress)+prediction_scope,linear_params[0],linear_params[1],linear_params[2]),decimals=2),prediction_scope))
-            plt.plot(range(len(progress)+prediction_scope)[1:],[linear_fit(x,linear_params[0],linear_params[1],linear_params[2]) for x in range(len(progress)+prediction_scope)[1:]],'b--',alpha = 0.5,label = 'Assuming linear growth')
+            plt.plot(range(len(progress)+prediction_scope)[1:],[linear_fit(x,linear_params[0],linear_params[1],linear_params[2]) for x in range(len(progress)+prediction_scope)[1:]],'b--',alpha = 0.5,label = 'Assuming linear Component')
             
             log_params, log_param_cov = scipy.optimize.curve_fit(log_fit,range(len(progress))[1:],progress[1:])
             print("Assuming only logarithmic growth, Maximum Average is expected to be at {} in {} generations.".format(np.round(log_fit(len(progress)+prediction_scope,log_params[0],log_params[1],log_params[2]),decimals=2),prediction_scope))
             plt.plot(range(len(progress)+prediction_scope)[1:],[log_fit(x,log_params[0],log_params[1],log_params[2]) for x in range(len(progress)+prediction_scope)[1:]],'r--',alpha = 0.5,label = 'Assuming logarithmic growth')
+            
+            plt.ylabel("Average Score")
+            plt.xlabel("Generation")
             
             plt.plot(range(len(progress)),progress,'k',alpha = 0.4)
             plt.legend()
