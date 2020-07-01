@@ -1,30 +1,20 @@
-# Magic Man
+# Magic Man - NeuroEvolution of Augmenting Topologies (NEAT) Branch
 
-I implemented a game based on the cardgame "Wizard" and want to train bots to play it.
-The projects goal is to improve to a point where the bots are as good or better than human players.
+In order to achieve better results this branch was created in order to implement a far more sophisticated algorithm for evolving NNs.
+The implementation is based on a paper by K.O. Stanley and R. Miikkulainen that was published back in 2002 in the MIT Press Journals.
+In their paper, K.Stanley and R.Miikulainen outline an algorithm and introduce new features to existing methods that significantly improve their performance.
+The main feature introduced by the authors is the evolution of the topolgy of the neural net in addition to its connectivity.
+Beyond that the authors introduce innovative mechanisms such as Speciation, starting from minimal structure and an improved method of mating to further improve the performance.
 
-## Structure
-As of now the bots consist of three neural nets each. Each neural net for a specific action the bots have to take during the game.
-The bots then play the game against each other and reproduce based on their average score.
-It is also possible to play against the bots directly.
+## Motivation and Goals
+I implemented the algorithm in the current master branch mostly in order to learn about Neuroevolution.
+More specificaly - to encounter the most basic problems that have to be solved in order to make a genetic algorithm solve the given task.
+Since the current implementation did not achieve much in the sense of maximum fitness, the idea is to turn to more refined approaches in order to achieve better results.
+Beyond the results, the motivation is to learn more about Neuroevolution and its practical challenges.
 
 ## Challenges
-
-The motivation for this project was to learn about genetic learning algorithms by implementing one from scratch.
-Because I had litle experience prior to starting this project a lot of things had to be learned first.
-One particular problem I encountered was the factor of luck in the game.
-It is not possible to determine how fit any specimen of the population is until it has played a large amount of games.
-Other Challenges include finding the optimal topology for the neural nets, optimizing the speed of the algorithm and visualization.
-
-## Results this far
-
-Results from the currently implemented method have been good but do not reach the goal of matching a human player.
-While an average human player scores an average score of about 250 in any given game, the bots reach a maximum average score of about 60 before they stall out.
-
-![Figure_1](https://user-images.githubusercontent.com/64082072/84660928-db821500-af19-11ea-9e07-e9e3f1bcae35.png)
-
-## Prospect
-
-The next step is to implement a NeuroEvolution of Augmenting Topologies (NEAT) algorithm.
-I have high expectations for this method, since it is far more sophisticated than the algorithm that I implemented from scratch.
+As mentioned in the master branch, the element of chance in the game Wizard will probably remain a problem for the NEAT algorithm.
+This concern is appropriate. Mostly because in their paper, K.Stanley and R.Mikkulainen only apply the algorithm to tasks that lack any element of chance.
+(XOR gate, Double Pole Balancing - with and without velocities)
+Training time could be increased significantly by this.
 
