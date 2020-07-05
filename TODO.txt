@@ -1,0 +1,50 @@
+What changes need to be made to the existing code 
+and which new feature need to be introduced in order to implement NEAT.
+
+__________________________________________________________________________________________________
+__________________________________________________________________________________________________
+[CHANGE] Activation Function:
+Because of the way the new nets are generated the old activation function does not work anymore.
+The function needs to be modified appropriately.
+The challenge is not to find a function that works but a function that works efficiently.
+Obviously, the activation function will be called very often so optimization is crucial.
+
+__________________________________________________________________________________________________
+[CHANGE] Initial NN generation:
+For NEAT the neural nets start out minimal.
+I.e. every node on the input layer is connected to every node on the output layer.
+There are no hidden nodes at all. All hidden nodes are generated later through NEAT.
+
+__________________________________________________________________________________________________
+[NEW] Genomes:
+Instead of saving the NNs as a matrix of connection weights and biases they are saved as two sets of Genomes.
+One for the nodes and one for the connection between them.
+Contained within the Genomes as well is the historical marking of each mutation.
+The historical markings are the base for most essential methods of the NEAT algorithm.
+
+Example from the paper:
+Node Genes: 	[Node 1, Sensor],
+		[Node 2, Sensor],
+		[Node 3, Sensor],
+		[Node 4, Output],
+		[Node 5, Hidden]
+
+Connect.Genes:	[In 1, Out 4, Weight  0.7,  Enabled, Innovation 1]
+		[In 2, Out 4, Weight -0.5, Disabled, Innovation 2]
+		[In 3, Out 4, Weight  0.5,  Enabled, Innovation 3]
+		[In 2, Out 5, Weight  0.2,  Enabled, Innovation 4]
+		[In 5, Out 4, Weight  0.4,  Enabled, Innovation 5]
+		[In 1, Out 5, Weight  0.6,  Enabled, Innovation 6]
+		[In 4, Out 5, Weight  0.6,  Enabled, Innovation 11]
+
+The genotype produces the phenotype, the phenotype being the neural net itself.
+Slight adjustments will need to be made s.t. one bot contains a three seperate genotypes for three NNs.
+When two bots mate, the respective genotypes for each net will be crossed over.
+(So that the playing net doesnt cross over with the bidding net.)
+
+__________________________________________________________________________________________________
+[NEW] Evolution Process
+The Evolution Process will be changed entirely.
+While before, the champion of each generation was mutated randomly, the process is refined significantly.
+New features need to be introduced: Mating, Speciation and Topologic Evolution.
+

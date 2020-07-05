@@ -15,7 +15,7 @@ def logit_bidding (p):
 
 #______________________________________________________________________________
 #Player Class constructor
-#initialy a four player bot is tnorained
+#initialy a four player bot is trained
 class Network:
     def __init__ (self,player,load,arg,layers,init_sigma=1): #layers is the design of the network e.g. [21,30,30,1] --> [input,hidden_1,hidden_2,output]
 
@@ -151,7 +151,7 @@ class Player:
         for layer in range(len(self.progress_net.weights)):
             activation = expit(np.dot(self.progress_net.weights[layer], activation) + self.progress_net.biases[layer])
         self.current_progress = activation
-        return activation
+        return self.current_progress
        
     def play (self):
         activation = self.info_cards
