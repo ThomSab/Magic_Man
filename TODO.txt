@@ -48,3 +48,6 @@ The Evolution Process will be changed entirely.
 While before, the champion of each generation was mutated randomly, the process is refined significantly.
 New features need to be introduced: Mating, Speciation and Topologic Evolution.
 
+__________________________________________________________________________________________________
+[NEW] Diagnostics
+Implement a non-hacky function to monitor what is going on inside the algorithm.
