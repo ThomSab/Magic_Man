@@ -45,17 +45,17 @@ def save (name,directory=cwd,genome=False,score_data=False,generate=False):
     
     if genome:
         try:
-            with open(directory + r'\{}\node_genome.json'.format(name),'w')as safe_file:
+            with open(directory + r'\{}\genome.json'.format(name),'w')as safe_file:
                 json.dump(genome,safe_file)
         except Exception as exception:
-            print("Saving the node_genome failed: {}".format(exception))
+            print("Saving the genome failed: {}".format(exception))
                   
     if score_data:
         try:
-            with open(directory + name + r'\score_data.json','w')        as safe_file:
+            with open(directory + r'\{}\score_data.json'.format(name),'w')as safe_file:
                 json.dump(score_data,safe_file)              
         except Exception as exception:
-            print("Saving the connection_genome failed: {}".format(exception))
+            print("Saving the score_data failed: {}".format(exception))
             
 
 

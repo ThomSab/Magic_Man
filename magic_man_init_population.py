@@ -3,9 +3,9 @@ import json
 import magic_man_utils as utils
 
 
-def initial_genome(name,N_bid_sensors  =  89,N_bid_outputs  =  1,
-                     N_play_sensors = 160,N_play_outputs = 60,
-                     N_stm_sensors  = 160,N_stm_outputs  = 10):
+def initial_genome(N_bid_sensors  =  89,N_bid_outputs  =  1,
+                   N_play_sensors = 160,N_play_outputs = 60,
+                   N_stm_sensors  = 160,N_stm_outputs  = 10):
     """
     Creates a genome for the minimal structure as described in the paper
     All Sensors are connected to all output nodes
@@ -35,16 +35,20 @@ def initial_genome(name,N_bid_sensors  =  89,N_bid_outputs  =  1,
     stm_connections = [{"IN": sensor_idx, "OUT": output_idx,"WEIGHT": 0, "ENABLED": 1, "INNOVATION": N_stm_outputs*sensor_idx+output_idx+1}
                         for sensor_idx in range(N_stm_sensors) for output_idx in range(N_stm_outputs)]
 
-    return [{
+    return {
         "bid_node_genome"       :bid_sensors+bid_outputs,
         "bid_connection_genome" :bid_connections,
         "play_node_genome"      :play_sensors+play_outputs,
         "play_connection_genome":play_connections,
         "stm_node_genome"       :stm_sensors+stm_outputs,
         "stm_connection_genome" :stm_connections
-        }]
-        
+        }
+
+def initial_score():
+    return [{"SCORE":[0]}]
     
 if __name__ == "__main__":
-    print(initial_genome('josh'))
-    utils.save('josh',genome = initial_genome('josh'),generate=True)
+    for _ in ['josh', 'andrew', 'jasper', 'philip', 'paul']:
+        utils.save(_,genome = initial_genome(),generate=True)
+        utils.save(_,score_data = initial_score(),generate=True)
+    

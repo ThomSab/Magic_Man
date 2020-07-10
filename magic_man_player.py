@@ -1,18 +1,11 @@
 import numpy as np
 import os
+import json
 import magic_man_deck as deck
 import magic_man_utils as utils
 from scipy.special import expit
 
 base_path = os.getcwd()
-
-
-
-
-
-
-
-
 
 #______________________________________________________________________________
 #Player Class constructor
@@ -54,30 +47,39 @@ class Player:
     is loaded and then used to generate a neural net for bid, play, progress etc.
     The connections currently have no bias parameter but it can be added easily
     """
-    def __init__(self,name,genome,sigmoid_function):
+    def __init__(self,name,sigmoid_function=expit):
     
         self.round_score = 0
         self.game_score  = 0
         self.name = 'Player_{}'.format(name)
         self.cards = [] #an empty hand so to speak
+        self.stm = None
         
-        if not os.path.exists(base_path+'\{}'.format(name)):
-            print("ERRROR: Player {} Directory does not exist.".format(name))
-            
-        else:
-            self.bid_net  = Network(self,bid_node_genome,bid_connection_genome)
-            self.play_net = Network(self,play_genome    ,play_connection_genome)
-            self.stm_net  = Network(self,stm_node_genome,stm_connection_genome)
+        if os.path.exists(base_path+'\{}'.format(name)):
+            with open(base_path+'\{}\genome.json'.format(name)) as genome_file:
+                genome = json.load(genome_file)
+                
+            bid_node_genome, bid_connection_genome  = genome["bid_node_genome"], genome["bid_connection_genome"]
+            play_node_genome,play_connection_genome = genome["play_node_genome"],genome["play_connection_genome"]
+            stm_node_genome, stm_connection_genome  = genome["stm_node_genome"], genome["stm_connection_genome"]
+
+            self.bid_net  = self.Network(bid_node_genome, bid_connection_genome,sigmoid_function)
+            self.play_net = self.Network(play_node_genome,play_connection_genome,sigmoid_function)
+            self.stm_net  = self.Network(stm_node_genome, stm_connection_genome,sigmoid_function)
 
             print('{} loaded'.format(self.name))
+            
+        else:   
+            print("ERRROR: Player {} Directory does not exist.".format(name))
+            
 
             
         
 
 
-    def str__     (self):
+    def __str__     (self):
         return self.name        
-    def repr__    (self):
+    def __repr__    (self):
         return self.name
     def clean_hand(self):
         self.cards = []  
@@ -109,8 +111,8 @@ class Player:
         return self.current_bid
     
     def stm (self):#Short Term Memory
-        activation = self.stm_net.activation()       
-        return self.current_progress
+        self.current_stm = self.stm_net.activation()       
+        return self.current_stm
        
     def play (self):
         activation = self.play_net.activation()
@@ -140,16 +142,19 @@ class Player:
         Output:
         Generates a NN
         """
-        def __init__ (self,node_genome,connection_genome):
-            self.nodes = [Node(node["INDEX"],node["TYPE"]) for node in node_genome]
-            for node in nodes:
+        def __init__ (self,node_genome,connection_genome,sigmoid_function):
+            self.nodes = [self.Node(node["INDEX"],node["TYPE"]) for node in node_genome]
+
+            #could also be a oneliner:
+            for node in self.nodes:
                 for connection in connection_genome:
                     if connection["OUT"] == node.index and connection["ENABLED"]:
-                        node.lins.append({"node":nodes[connection["IN"]],"connection":connection})
-            
-            self.hidden_nodes = [ node for node in self.nodes and node.type == "HIDDEN"]
-            self.output_nodes = [ node for node in self.nodes and node.type == "OUTPUT"]
-            self.sensor_nodes = [ node for node in self.nodes and node.type == "SENSOR"]
+                        node.lins.append({"node":self.nodes[connection["IN"]],"connection":connection})
+            #up to here --> but this seems more intuitive
+
+            self.hidden_nodes = [ node for node in self.nodes if node.node_type == "HIDDEN"]
+            self.output_nodes = [ node for node in self.nodes if node.node_type == "OUTPUT"]
+            self.sensor_nodes = [ node for node in self.nodes if node.node_type == "SENSOR"]
 
   
         def activation (self):
@@ -174,23 +179,29 @@ class Player:
             
             #clearing the non-sensor nodes
             for node in self.output_nodes + self.hidden_nodes:
-                node.activation = False
+                node.activation = None
             
             #calculating activations
             return [node.node_activation() for node in self.output_nodes] 
 
+
+        def list_input(self,index_start,list_argument):
+            for idx,activation in enumerate(list_argument):
+                self.sensor_nodes[index_start+idx].activation = activation
+
+
    
         class Node:
-            def __init__(self,index,type):
+            def __init__(self,index,node_type):
                 self.index  = index
-                self.type   = type  
-                self.activation = False
+                self.node_type  = node_type  
+                self.activation = None
                 #LINs --> Local Input Nodes
                 #first all nodes are constructed through the node_genome
                 #then the lins are determined through the connection_genome
                 self.lins   = []
                 
-            def node_activation(sigmoid_function):
+            def node_activation(self,sigmoid_function):
                 """
                 Activation calculation is recursive in a way
                 The current node calls up other node's activation functions until
@@ -205,11 +216,10 @@ class Player:
                 ________
                 Output:
                 The nodes activation
-                
                 """
-                if not self.activation:
+                if self.activation is None:
                     #local_input_node or lin is a list of dictionarys [{"node":node,"connection":connection},...]
                     self.activation = sigmoid_function(sum([lin["connection"]["WEIGHT"]*lin["node"].node_activation() for lin in self.lins]))
                 return self.activation
         
-
+        
