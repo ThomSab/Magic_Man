@@ -21,9 +21,9 @@ def logit_bidding (p):
     """
     bid_factor = 0.3*np.log(p/(1-p))+1
     if bid_factor < 0 :
-        return [[0]]
+        return 0
     elif bid_factor > 4:
-        return [[4]]
+        return 4
     else:
         return bid_factor
 

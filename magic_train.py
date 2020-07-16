@@ -13,7 +13,6 @@ import matplotlib.pyplot as plt
 
 import magic_man_deck as deck
 from magic_man_player  import Player
-from base_path import base_path,bot_dir
 from magic_main import Game
 from magic_man_stats import mov_avg
 from magic_man import txt
@@ -21,6 +20,7 @@ from magic_man import txt
 number_of_players = 4 #for now
 clear = lambda: os.system('cls')
 
+bot_dir = '0'
 
 """
 The players are named by score
@@ -356,31 +356,17 @@ def training_session(pool_size = pool_size,learning_rate = learning_rate, n_clon
 
 
 if __name__ == "__main__": #so it doesnt run when imported
-    print(txt)
-    if create_initial_pool_bool:
-        players = [Player(_,init_sigma = learning_rate) for _ in range(pool_size)]
-    refresh_player_serial_number()
-
-
-    while True:
-        kill_count_down = 9
-        killed_and_cloned = False
-        while not killed_and_cloned and kill_count_down >= 0:#try:
-            if kill_count_down == 0:
-                print('Kill Countdown is at', kill_count_down)
-                refresh_max_avg_score()
-                resize_full_pool(full_pool_size = pool_size_limit)
-                killed_and_cloned = True
-                training_session(n_clones = 50,session = kill_count_down)
-            else:
-                print('Kill Countdown is at', kill_count_down)
-                training_session(session = kill_count_down)
-                kill_count_down -= 1
-            #except Exception as exc:
-            #    print('Training session failed. \n {}'.format(exc))
-
-
-
-
+    print("Magic Man")
+    jasper,josh,andrew,philip = Player('jasper'),Player('josh'),Player('andrew'),Player('philip')
+    gamepool = [jasper,josh,andrew,philip]
+    game = Game(4,gamepool,deck.deck.copy())
+    game_pool_copy = gamepool.copy()
+    for i in range(1,16): #how many rounds
+        if not i == 15:
+            game.starting_player(game_pool_copy[i%4])
+            game.round(i)
+        else:
+            game.starting_player(game_pool_copy[15%4])
+            game.round(i,lastround = True)
 
 

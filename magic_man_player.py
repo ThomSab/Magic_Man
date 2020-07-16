@@ -53,7 +53,8 @@ class Player:
         self.game_score  = 0
         self.name = 'Player_{}'.format(name)
         self.cards = [] #an empty hand so to speak
-        self.stm = None
+        self.current_stm = [0 for _ in range(10)] #Initiating stm
+        self.sigmoid = sigmoid_function
         
         if os.path.exists(base_path+'\{}'.format(name)):
             with open(base_path+'\{}\genome.json'.format(name)) as genome_file:
@@ -63,9 +64,9 @@ class Player:
             play_node_genome,play_connection_genome = genome["play_node_genome"],genome["play_connection_genome"]
             stm_node_genome, stm_connection_genome  = genome["stm_node_genome"], genome["stm_connection_genome"]
 
-            self.bid_net  = self.Network(bid_node_genome, bid_connection_genome,sigmoid_function)
-            self.play_net = self.Network(play_node_genome,play_connection_genome,sigmoid_function)
-            self.stm_net  = self.Network(stm_node_genome, stm_connection_genome,sigmoid_function)
+            self.bid_net  = self.Network(bid_node_genome, bid_connection_genome,net_sigmoid_function = self.sigmoid)
+            self.play_net = self.Network(play_node_genome,play_connection_genome,net_sigmoid_function = self.sigmoid)
+            self.stm_net  = self.Network(stm_node_genome, stm_connection_genome,net_sigmoid_function = self.sigmoid)
 
             print('{} loaded'.format(self.name))
             
@@ -90,13 +91,14 @@ class Player:
     def bid (self,round_idx,last_player = False):
         activation = self.bid_net.activation()
         
-        self.current_activation = ((logit_bidding(activation)[0][0]*round_idx)/4)
+        self.current_activation = ((utils.logit_bidding(activation[0])*round_idx)/4)
             #multiply by the number of card in hand
             #then divide by the amount of players 
             #to have a better starting point for the bots
         self.current_bid = np.round(self.current_activation)
         if last_player:
-            if self.current_bid + np.sum([_ + (round_idx/4) for _ in self.info_bid[0:3]]) == round_idx: 
+            if self.current_bid + np.sum([sensor_node.activation[0] + (round_idx/4) for sensor_node in self.bid_net.sensor_nodes[0:3]]) == round_idx:
+            #sensor nodes 0:3 are how high every player has bid including self
             #if the desired bid is not possible because the bids would add up to the number of cards in all hands
                 if self.current_activation - np.round(self.current_activation) > 0: #if bid value was rounded down
                     self.current_bid = self.current_bid + 1 #bc tencency is up
@@ -142,8 +144,8 @@ class Player:
         Output:
         Generates a NN
         """
-        def __init__ (self,node_genome,connection_genome,sigmoid_function):
-            self.nodes = [self.Node(node["INDEX"],node["TYPE"]) for node in node_genome]
+        def __init__ (self,node_genome,connection_genome,net_sigmoid_function):
+            self.nodes = [self.Node(node["INDEX"],node["TYPE"],net_sigmoid_function) for node in node_genome]
 
             #could also be a oneliner:
             for node in self.nodes:
@@ -192,16 +194,17 @@ class Player:
 
    
         class Node:
-            def __init__(self,index,node_type):
+            def __init__(self,index,node_type,node_sigmoid_function):
                 self.index  = index
                 self.node_type  = node_type  
                 self.activation = None
+                self.sigmoid = node_sigmoid_function
                 #LINs --> Local Input Nodes
                 #first all nodes are constructed through the node_genome
                 #then the lins are determined through the connection_genome
                 self.lins   = []
                 
-            def node_activation(self,sigmoid_function):
+            def node_activation(self):
                 """
                 Activation calculation is recursive in a way
                 The current node calls up other node's activation functions until
@@ -219,7 +222,7 @@ class Player:
                 """
                 if self.activation is None:
                     #local_input_node or lin is a list of dictionarys [{"node":node,"connection":connection},...]
-                    self.activation = sigmoid_function(sum([lin["connection"]["WEIGHT"]*lin["node"].node_activation() for lin in self.lins]))
+                    self.activation = self.sigmoid(sum([lin["connection"]["WEIGHT"]*lin["node"].node_activation() for lin in self.lins]))
                 return self.activation
         
         

@@ -138,7 +138,7 @@ class Game:
                 player.bid_net.list_input(0,[[bid[0] - (len(player.cards)/4)] for bid in self.bids])  #how high all the players bid minus the average expected amount of suits they win
             player.bid_net.list_input(4,[[1] if _ == len(player.cards) else [0] for _ in range(self.max_rounds)])                 #how many cards there are in his hand
             player.bid_net.list_input(19,[[1] if _ == self.players.index(player) else [0] for _ in range(number_of_players)])      #what place in the players the player has
-            player.bid_net.list_input(23,[[1] if _ == self.trump else [0] for _ in range(6)] #which color is currently trump
+            player.bid_net.list_input(23,[[1] if _ == self.trump else [0] for _ in range(6)]) #which color is currently trump
 
             player.bid_net.list_input(29,[ [1] if card in player.cards else [0] for card in deck.deck  ])# cards in hand
             
