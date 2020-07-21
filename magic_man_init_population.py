@@ -2,10 +2,16 @@ import os
 import json
 import magic_man_utils as utils
 
+N_bid_sensors  = 89
+N_bid_outputs  = 1
+N_play_sensors = 160
+N_play_outputs = 60
+N_stm_sensors  = 160
+N_stm_outputs  = 10
 
-def initial_genome(N_bid_sensors  =  89,N_bid_outputs  =  1,
-                   N_play_sensors = 160,N_play_outputs = 60,
-                   N_stm_sensors  = 160,N_stm_outputs  = 10):
+def initial_genome(N_bid_sensors,N_bid_outputs,
+                   N_play_sensors,N_play_outputs,
+                   N_stm_sensors,N_stm_outputs):
     """
     Creates a genome for the minimal structure as described in the paper
     All Sensors are connected to all output nodes
@@ -44,11 +50,30 @@ def initial_genome(N_bid_sensors  =  89,N_bid_outputs  =  1,
         "stm_connection_genome" :stm_connections
         }
 
-def initial_score():
-    return [{"SCORE":[0]}]
-    
+
+"""
+Innitial Innovation Number for each net
+the IIN depends on how many sensor nodes and output nodes a net has
+It is constant over all initial bots since they all start out minimal
+"""    
+bid_iin  = [ ((N_bid_outputs) *N_bid_sensors)  ]
+play_iin = [ ((N_play_outputs)*N_play_sensors) ]
+stm_iin  = [ ((N_stm_outputs) *N_stm_sensors)  ]
+
+
+
 if __name__ == "__main__":
-    for _ in ['josh', 'andrew', 'jasper', 'philip', 'paul']:
-        utils.save(_,genome = initial_genome(),generate=True)
-        utils.save(_,score_data = initial_score(),generate=True)
+    for player in ['josh', 'andrew', 'jasper', 'philip', 'paul']:
+        utils.save_init_genome(player,
+            init_genome = initial_genome(N_bid_sensors,N_bid_outputs,N_play_sensors,N_play_outputs,N_stm_sensors,N_stm_outputs))
+        utils.save_init_score(player,0)
+    for net_type,net_iin in [('bid',bid_iin),('play',play_iin),('stm',stm_iin)]:
+        utils.save_init_innovation(net_type,net_iin)
+
+
+
+
+
+
+
     

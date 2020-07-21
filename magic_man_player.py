@@ -51,12 +51,12 @@ class Player:
     
         self.round_score = 0
         self.game_score  = 0
-        self.name = 'Player_{}'.format(name)
+        self.name = name
         self.cards = [] #an empty hand so to speak
         self.current_stm = [0 for _ in range(10)] #Initiating stm
         self.sigmoid = sigmoid_function
         
-        if os.path.exists(base_path+'\{}'.format(name)):
+        if os.path.exists(base_path+'\{}'.format(self.name)):
             with open(base_path+'\{}\genome.json'.format(name)) as genome_file:
                 genome = json.load(genome_file)
                 
