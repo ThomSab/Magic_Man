@@ -56,8 +56,8 @@ class Player:
         self.current_stm = [0 for _ in range(10)] #Initiating stm
         self.sigmoid = sigmoid_function
         
-        if os.path.exists(base_path+'\{}'.format(self.name)):
-            with open(base_path+'\{}\genome.json'.format(name)) as genome_file:
+        if os.path.exists(base_path+'\Bots\{}'.format(self.name)):
+            with open(base_path+'\Bots\{}\genome.json'.format(name)) as genome_file:
                 genome = json.load(genome_file)
                 
             bid_node_genome, bid_connection_genome  = genome["bid_node_genome"], genome["bid_connection_genome"]

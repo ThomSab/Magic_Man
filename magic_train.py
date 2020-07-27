@@ -12,9 +12,10 @@ import matplotlib.pyplot as plt
 
 
 import magic_man_deck as deck
+import magic_man_diagnostics as diagnostics
+import magic_man_utils as utils
 from magic_man_player  import Player
 from magic_main import Game
-from magic_man_stats import mov_avg
 from magic_man import txt
 #______________________________________________________________________________    
 number_of_players = 4 #for now
@@ -357,16 +358,17 @@ def training_session(pool_size = pool_size,learning_rate = learning_rate, n_clon
 
 if __name__ == "__main__": #so it doesnt run when imported
     print("Magic Man")
-    jasper,josh,andrew,philip = Player('jasper'),Player('josh'),Player('andrew'),Player('philip')
-    gamepool = [jasper,josh,andrew,philip]
+    jasper,josh,paul,philip = Player('jasper'),Player('josh'),Player('paul'),Player('philip')
+    gamepool = [jasper,josh,paul,philip]
     game = Game(4,gamepool,deck.deck.copy())
     game_pool_copy = gamepool.copy()
-    for i in range(1,16): #how many rounds
-        if not i == 15:
-            game.starting_player(game_pool_copy[i%4])
-            game.round(i)
-        else:
-            game.starting_player(game_pool_copy[15%4])
-            game.round(i,lastround = True)
+    
+    #let them play 1000 games
+    for game_idx in range(1000):
+        play_game(gamepool)
+    
+        #show how the score behaves over those games
+        for player in gamepool:
+            utils.add_score(player.name,player.game_score)
 
 
