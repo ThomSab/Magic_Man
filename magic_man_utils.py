@@ -77,44 +77,52 @@ def save_init_score (bot_name,init_score,directory=cwd):
         print("Saving the initial score failed: {}".format(exception))
         
 
-def save_init_innovation(net_type,init_innovation,directory=cwd):
+def save_init_innovation(nn_type,init_innovation,directory=cwd):
     """
     ______
     Input:
-        net_type
+        nn_type
         can be ['play','bid','stm']
     ______
     Output:
-        Saves the initial innovation number for a net.
-        How high this number is depends on the initial size of the net.
+        Saves the initial innovation number for a neural net.
+        How high this number is depends on the initial size of the neural net.
     ______
         Historical marking is a globals variable.
         It is not an attribute of any single bot but instead of one kind of evolutional process.
-        There is one history for each net i.e. bidding, stm, play.
-        Each net has an individual innovation number bc changes to the net only apply to that kind of net        
+        There is one history for each neural net i.e. bidding, stm, play.
+        Each neural net has an individual innovation number bc changes to the neural net only apply to that kind of neural net        
 
     """
     if not os.path.exists(directory + r'\Bots'):
         os.mkdir(directory + r'\Bots')
     try:
-        with open(directory + r'\Bots\{}_innovation.json'.format(net_type),'x')as init_innovation_file: #open mode 'x' creates a file and fails if it already exists
+        with open(directory + r'\Bots\{}_innovation.json'.format(nn_type),'x')as init_innovation_file: #open mode 'x' creates a file and fails if it already exists
             json.dump(init_innovation,init_innovation_file)
         return
     except Exception as exception:
         print("Saving the initial innovation number failed: {}".format(exception))
 
 
+
 def load_bot_genome(bot_name,directory=cwd):
     with open(directory + r'\Bots\{}\genome.json'.format(bot_name),'r') as genome_file:
         return json.load(genome_file)
+
 
 def load_bot_score(bot_name,directory=cwd):
     with open(directory + r'\Bots\{}\score.json'.format(bot_name),'r') as score_file:
         return json.load(score_file)["SCORE"]
 
-def load_innovation_number(net_type,directory=cwd):
-    #net_type can be ['play','bid','stm']
-    return json.load(open(directory + r'\Bots\{}_innovation.json'.format(net_type),'r'))
+def load_bot_names(directory=cwd):
+    bot_dir = os.listdir(cwd +'\Bots')
+    return [bot_name for bot_name in bot_dir if bot_name not in ['bid_innovation.json','play_innovation.json','stm_innovation.json']]
+
+
+def load_innovation_number(nn_type,directory=cwd):
+    #nn_type can be ['play','bid','stm']
+    return json.load(open(directory + r'\Bots\{}_innovation.json'.format(nn_type),'r'))
+
 
 def add_score (bot_name,add_score,directory=cwd):
     try:
@@ -132,11 +140,11 @@ def add_score (bot_name,add_score,directory=cwd):
         print("Saving additional score failed: {}".format(exception))
         
     
-def increment_in(net_type,directory=cwd):
+def increment_in(nn_type,directory=cwd):
     """
     ______
     Input:
-        net_type
+        nn_type
     ______
     Output:
         None
@@ -144,10 +152,10 @@ def increment_in(net_type,directory=cwd):
     """
 
     try:
-        with open(directory + r'\Bots\{}_innovation.json'.format(net_type),'r') as innovation_file:#open mode 'w+' read AND writes a file
+        with open(directory + r'\Bots\{}_innovation.json'.format(nn_type),'r') as innovation_file:#open mode 'w+' read AND writes a file
             innovation_number = json.load(innovation_file)         
             innovation_number += 1
-        with open(directory + r'\Bots\{}_innovation.json'.format(net_type),'w') as innovation_file:
+        with open(directory + r'\Bots\{}_innovation.json'.format(nn_type),'w') as innovation_file:
             json.dump(genome,innovation_file)
         return
             
@@ -163,69 +171,116 @@ def bot_compatibility_distance(genome_A,genome_B,c_1,c_2,c_3):
     """
     ______
     Input:
-        Two Genomes containing three net genomes
+        Two Genomes containing three neural net genomes each
         one for each operation 
     ______
     Output:
         Compatibility Distance between the two genomes
     ______
-        Compatibility distance is calculated for all nets together
+        Compatibility distance is calculated for all neural nets together
         This is bc the decisions might be interlinked i.e.
         The stm and the playing strategy might not be seperable
         
     """
-    return sum([net_compatibility_distance(genome_A[net_genome],genome_B[net_genome],c_1,c_2,c_3) 
-    for net_genome in ["bid_connection_genome","play_connection_genome","stm_connection_genome"]])
+    return  sum([nn_compatibility_distance(genome_A[nn_genome],genome_B[nn_genome],c_1,c_2,c_3) 
+            for nn_genome in ["bid_connection_genome","play_connection_genome","stm_connection_genome"]])
     
     
-        
-      
+
+
+ 
     
-def net_compatibility_distance(net_genome_A,net_genome_B,c_1,c_2,c_3):
+def nn_compatibility_distance(nn_genome_A,nn_genome_B,c_1,c_2,c_3):
     """
     ______
     Input:
-        Two net Genomes
+        Two neural net Genomes
     ______
     Output:
-        Compatibility distance between the two net genomes
+        Compatibility distance between the two neural net genomes
     """
-    ng_A_history,ng_B_history = [gene["INNOVATION"] for gene in net_genome_A],[gene["INNOVATION"] for gene in net_genome_B] 
+    nng_A_history,nng_B_history = [gene["INNOVATION"] for gene in nn_genome_A],[gene["INNOVATION"] for gene in nn_genome_B] 
     
-    if max(ng_A_history) >= max(ng_B_history):
-        excess_genes = len([ inn_num for inn_num in ng_A_history if inn_num >  max(ng_B_history)])
+    if nng_A_history[-1] >= nng_B_history[-1]:# 'history[-1] instead of max(history) bc history list should be sorted
+        excess_genes = len([ inn_num for inn_num in nng_A_history if inn_num >  nng_B_history[-1]])
     else:
-        excess_genes = len([ inn_num for inn_num in ng_B_history if inn_num >  max(ng_A_history)])
+        excess_genes = len([ inn_num for inn_num in nng_B_history if inn_num >  nng_A_history[-1]])
     #How many genes the newer genome has that have a higher innovation number than the highest one from the older genome
     #this is E, the number of excess genes
         
-    ng_A_matching = [gene for gene in net_genome_A if gene["INNOVATION"] in ng_B_history]
-    ng_B_matching = [gene for gene in net_genome_A if gene["INNOVATION"] in ng_A_history]
+    nng_A_matching = [gene for gene in nn_genome_A if gene["INNOVATION"] in nng_B_history]
+    nng_B_matching = [gene for gene in nn_genome_A if gene["INNOVATION"] in nng_A_history]
     
-    disjoint_genes = (len(ng_A_history)-len(ng_A_matching)) + (len(ng_B_history)-len(ng_B_matching)) - excess_genes
+    disjoint_genes = (len(nng_A_history)-len(nng_A_matching)) + (len(nng_B_history)-len(nng_B_matching)) - excess_genes
     """
     number of disjoint genes are the amount of genes that are not matching with any gene from the other genome by innovation number
     excess genes are substracted bc. they are not both disjoint AND excess genes
     """
 
-    weights_A,weights_B = np.array([gene["WEIGHT"] for gene in ng_A_matching]),np.array([gene["WEIGHT"] for gene in ng_B_matching])
+    weights_A,weights_B = np.array([gene["WEIGHT"] for gene in nng_A_matching]),np.array([gene["WEIGHT"] for gene in nng_B_matching])
     
-    weights_diff = abs(weights_A-weights_B)         #all absolute differences in weight in matching genes 
+    weight_diff = abs(weights_A-weights_B)         #all absolute differences in weight in matching genes 
     avg_wd_mg = np.mean(weight_diff)                #average weight difference of matching genes or W bar   
-    N = max([len(net_genome_A),len(net_genome_B)])  #the amount of genes in the larger genome
+    N = max([len(nn_genome_A),len(nn_genome_B)])    #the amount of genes in the larger genome
     
     return ((c_1*excess_genes+c_2*disjoint_genes)/N + c_3*avg_wd_mg) #the compatibility distance or delta
     
-    
-def fitness ():
+
+
+def compatibility_mat(c1,c2,c3):
     """
     ______
     Input:
-        A Score and the 
+        Coefficients for the compatibility distance function
     ______
     Output:
-        Compatibility distance between the two net genomes
+        Matrix containing the compatibility distances between all bots
+    ______
+        Since the distance doesn't have a direction,
+        and the distance of a bot to itself is zero,
+        only values to one side of the diagonal need to be calculated
+        
+        Nonetheless this funtion is incredibly slow
+        This might not be feasible for large populations :(
     """
+    bot_names = load_bot_names()
+    comp_mat = np.full((len(bot_names),len(bot_names)),np.NaN)
+    for bot_idx,bot_name_a in enumerate(bot_names):
+        comp_mat[bot_idx][bot_idx+1::] = [bot_compatibility_distance(load_bot_genome(bot_name_a),load_bot_genome(bot_name_b),c1,c2,c3)
+                              for bot_name_b in bot_names[bot_idx+1::]]#bot_idx+1 s.t. the diagonal isn't calculated
+
+    
+    return index_mat
+  
+
+def speciation (compat_thresh,compat_mat,represent = []):
+    """
+    ______
+    Input:
+        The set compatibility threshold
+        and the compatibility matrix
+    ______
+    Output:
+        Assigns each specimen in the population a species
+    """
+    assert type(represent)==list,"Representative Genome was not passed as a list but as {}".format(type(represent))
+        
+    
+    pass
+
+  
+   
+def fitness (score,speciation):
+    """
+    ______
+    Input:
+        An average score estimate
+        the amount of specimen in the same species
+    ______
+    Output:
+        Adjusted fitness
+    """
+    
     pass
     
     

@@ -358,17 +358,18 @@ def training_session(pool_size = pool_size,learning_rate = learning_rate, n_clon
 
 if __name__ == "__main__": #so it doesnt run when imported
     print("Magic Man")
-    jasper,josh,paul,philip = Player('jasper'),Player('josh'),Player('paul'),Player('philip')
-    gamepool = [jasper,josh,paul,philip]
+    bots = [Player(bot_name) for bot_name in utils.load_bot_names()]
+    gamepool = bots[:4]
     game = Game(4,gamepool,deck.deck.copy())
     game_pool_copy = gamepool.copy()
     
     #let them play 1000 games
-    for game_idx in range(1000):
+    for game_idx in range(1):
         play_game(gamepool)
     
         #show how the score behaves over those games
         for player in gamepool:
             utils.add_score(player.name,player.game_score)
 
+    cProfile.run('utils.compatibility_mat(1,1,1)')
 

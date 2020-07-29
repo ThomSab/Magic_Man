@@ -79,9 +79,7 @@ def bot_scores(width):
         the bots score mean estimate
         and the significance of the score mean estimate
     """ 
-    bot_dir   = os.listdir(os.getcwd()+'\Bots')
-    bot_names = [bot_name for bot_name in bot_dir if bot_name not in ['bid_innovation.json','play_innovation.json','stm_innovation.json'] ]
-    
+    bot_names = utils.load_bot_names()
     score_tuples = [(score_estim(width,bot_name),bot_name) for bot_name in bot_names]
     
     return score_tuples
