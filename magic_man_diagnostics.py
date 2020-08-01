@@ -29,7 +29,7 @@ def score_estim(width,bot_name):
     
     #std deviation of the mean is the sample mean over the root of n
     #the confidence depends then depends on the width entered
-    alpha = stats.norm.cdf((width/2)*np.sqrt(len(bot_score))/std)
+    alpha = 1 - stats.norm.cdf((width/2)*np.sqrt(len(bot_score))/std)
     
     return mean,alpha
     
@@ -92,7 +92,12 @@ def maximum_score(width):
     
     
     
-    
+def graph(bot_genome):
+    """
+    TODO
+    https://www.geeksforgeeks.org/python-visualize-graphs-generated-in-networkx-using-matplotlib/
+    """
+    pass
     
     
     

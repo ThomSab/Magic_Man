@@ -48,10 +48,13 @@ class Player:
     The connections currently have no bias parameter but it can be added easily
     """
     def __init__(self,name,sigmoid_function=expit):
-    
+        
+        self.name = name
+        self.species = None
+        self.fitness = None
+        
         self.round_score = 0
         self.game_score  = 0
-        self.name = name
         self.cards = [] #an empty hand so to speak
         self.current_stm = [0 for _ in range(10)] #Initiating stm
         self.sigmoid = sigmoid_function
@@ -211,7 +214,7 @@ class Player:
                 either the activation of the node is already known
                 or until an input node is reached.
                 
-                This has the neat (no pun intended) effect that redundant nodes are never calculated.
+                This has the neat (no pun intended) effect that the activation of redundant nodes is never calculated.
                 
                 ________
                 Input:

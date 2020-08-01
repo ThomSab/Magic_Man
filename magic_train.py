@@ -30,47 +30,8 @@ an average is calculated of the score
 so whenever a bot falls below a certain threshold it gets deleted
 to prevent the bots from taking up disk space
 """
-current_pool = None
-highestranking = None  
-pool_size = 100
-learning_rate = float(bot_dir.split('_')[-1])
-kill_bool = 1
-kill_margin = -15
-pool_size_limit = 500
-create_initial_pool_bool = False
 
-def load_pool (pool_size):
-    integrity_check = refresh_max_avg_score(integrity_check = True)
-    if integrity_check[0] == 'INCINERATE':
-        shutil.rmtree(base_path + bot_dir + r'\{}'.format(integrity_check[1]))
-        print('Bot {} incinerated'.format(integrity_check[1]))
-            
-    bot_avgscores = load_avg_scores()
-    bot_avgscores.sort(key = lambda x: x[0] , reverse = True)
-    current_pool = [Player(score_tuple[1]) for score_tuple in bot_avgscores[:pool_size]]
-    current_pool.sort(key = lambda x: int(x.id))
-    return current_pool
-
-
-
-
-def load_avg_scores(bot_dir = bot_dir):
-    path = base_path + bot_dir 
-    bot_dirnames = [dir for dir in os.listdir(path)]
-    if 'player_serial_number.txt' in bot_dirnames:
-        bot_dirnames.remove('player_serial_number.txt')
-    
-    bot_avgscores = [ (-100,0) for idx in range(len(bot_dirnames))]
-    idx = 0
-    for id in bot_dirnames:
-        with np.load(path + r'\{}\stat_arr_avg.npz'.format(id),allow_pickle = True) as file:
-            bot_avgscores[idx] = (file['avgscore'],id)
-            idx+=1
-        
-    return bot_avgscores
-
-
-
+pool_size = 150
 
 def play_game(game_pool):
     game_pool_copy = game_pool.copy()
@@ -102,274 +63,191 @@ def play_game(game_pool):
 
 
 
-def save_clone(id,arg,clone_weights,clone_biases):    
-    np.savez(base_path + bot_dir +  r'\{0}\player_{1}\{2}.npz'.format(id,id,arg),weights = clone_weights,biases = clone_biases)
+def species_represent(species_last_gen=None):
+    """
+    ______
+    Input:
+        species dictionary from last generation
+        or no input
+    ______
+    Output:
+        New Species representatives
+        or one single representative for the initial generation
+    """
+
+    species_current_gen = {}
+
+    if species_last_gen != None:      
+        for species in species_last_gen:
+            representative_name = random.choice(load_bot_names())
+            species_current_gen[representative_name] = [representative_name]
+            return species_current_gen
+    else:
+        print("First Generation, no seperate Species...\n")
+        representative_name = random.choice(utils.load_bot_names())
+        species_current_gen[representative_name] = [representative_name]
+        return species_current_gen
 
 
 
-
-def clone(player,learning_rate,number_of_clones):
-    path = base_path + bot_dir    
-    max_avgscore_tuple = refresh_max_avg_score()
-    current_max_score = max_avgscore_tuple[0]
-    
-    for clone in range(number_of_clones):# -1 )
-        highestid = refresh_player_serial_number()
-        clone_id = highestid+1
-        create_clone_path = Player(clone_id,init_score = (current_max_score) )
-                
-        for arg in ['bid','play','progress']:
-            with np.load(player.path + r'\{}.npz'.format(arg),allow_pickle = True) as file:
-                clone_weights , clone_biases = file['weights'], file['biases']
-                
-                for _ in range(len(clone_weights)):
-                    clone_weights[_] = clone_weights[_] + np.random.normal(0,learning_rate,clone_weights[_].shape)
-                for _ in range(len(clone_biases)):
-                    clone_biases[_] = clone_biases[_] + np.random.normal(0,learning_rate,clone_biases[_].shape)
-                
-                save_clone(clone_id,arg,clone_weights,clone_biases)
-
-
-
-
-def refresh_player_serial_number():
-    print("Refreshing Player Serial Number")
-    path = base_path + bot_dir
-    player_filenames = [_ for _ in os.listdir(path)]
-    if os.path.exists(path + '\player_serial_number.txt'):
-        player_filenames.remove('player_serial_number.txt')
+def speciation (c1,c2,c3,compat_thresh,bots,species = {}):
+    """
+    ______
+    Input:
+        The set compatibility threshold
+        the compatibility matrix
+        the representatives of each species in a dictonary
+    ______
+    Output:
+        Assigns each specimen in the population to a species
+        returns a dictionary for the speciation
+        { representative.name : [ all members of the species], ... }
+    ______
+        The original set of species is determined by the last generation
+        So for each species in the last generation one representative is selected randomly
+        and then passed to the speciation function for the next generation.
+        For the first generation the species dictionary is empty
+        and there is only one species as all bots are equal
+    """
+    assert type(species)==dict,"Representative Genome was not passed as a dictionary but as {}".format(type(represent))
+    assert species
         
-    player_filenames.sort(key = lambda x: float(x),reverse = True)
-    highest_id = float(player_filenames[0].split('_')[-1])
-    
-    bsn = open(base_path + bot_dir +  r'\player_serial_number.txt',"w")
-    bsn.write(str(int(highest_id)))
-    bsn.close()
-    
-    with open(base_path + bot_dir +  r'\player_serial_number.txt',"r") as bsn:
-        current_player_serial = bsn.read()
-        print("Highest Serial Number is {}.".format(current_player_serial))
-        bsn.close()
-    return int(highest_id)
-
-
-
-
-def refresh_max_avg_score(bot_directory = bot_dir,integrity_check = True,attempts = 3,progress_bool = False):
-    print("Refreshing Maximum Average Score")
-    learning_rate = float(bot_directory.split('_')[-1])
-    path = base_path + bot_directory
-    dirlist = os.listdir(path)
-    dirlist.remove('player_serial_number.txt')
-    for bot_id in dirlist:
-        if integrity_check:
-            try:
-                with np.load(path + '\\' + bot_id + '\stat_arr.npz',allow_pickle = True) as stats:
-                    stats = stats['stats']
-                    avg = sum(stats)/len(stats)
-                    np.savez(path + '\\' + bot_id + r'\stat_arr_avg.npz',avgscore = np.array(avg))
-                    
-
-            except BadZipFile:
-                if attempts > 0:
-                    one_less = (attempts-1)
-                    print('Failed because of Bot {}. \n{} attempts left.'.format(bot_id,attempts))
-                    return refresh_max_avg_score(attempts = one_less)
-                else:
-                    print('Integrity check failed')
-                    shutil.rmtree(base_path + bot_dir + r'\{}'.format(bot_id))
-                    print('Bot {} incinerated'.format(bot_id))
-                    return ('INCINERATE',bot_id)
-            except OSError: 
-                print("OSError in {}".format(bot_id))
+    for bot in bots:
+        if utils.compatibility_search(bot,c1,c2,c3,compat_thresh,species):#comp_search assigns the species to the bot but not the bot to the species dict
+            species[bot.species].append(bot.name)
         else:
-            with np.load(path + '\\' + bot_id + '\stat_arr.npz',allow_pickle = True) as stats:
-                stats = stats['stats']
-                avg = sum(stats)/len(stats)
-                np.savez(path + '\\' + bot_id + r'\stat_arr_avg.npz',avgscore = np.array(avg))
-    
-    avgscores = load_avg_scores(bot_dir = bot_directory)
-    avgscores.sort(key = lambda x: float(x[0]) , reverse = True)
-    print('Maximum average Score is {} for Bot {}'.format(np.round(avgscores[0][0],3),avgscores[0][1]))
+            species[bot.name] = [bot.name] #new representative
+   
 
-    try:
-        with np.load(base_path + r'\max_progress_{}.npz'.format(learning_rate),allow_pickle = True) as progress:
-            progress = list(progress['progress'])
-            progress.append(float(avgscores[0][0]))
-            np.savez(base_path + r'\max_progress_{}.npz'.format(learning_rate),progress = np.array(progress))
-    except FileNotFoundError:
-        np.savez(base_path + r'\max_progress_{}.npz'.format(learning_rate),progress = np.array([-10]))
-    
-    if progress_bool:
-        try:
-            with np.load(base_path + r'\real_max_progress_{}.npz'.format(learning_rate),allow_pickle = True) as progress:
-                progress = list(progress['progress'])
-                progress.append(float(avgscores[0][0]))
-                np.savez(base_path + r'\real_max_progress_{}.npz'.format(learning_rate),progress = np.array(progress))
-        except FileNotFoundError:
-            np.savez(base_path + r'\real_max_progress_{}.npz'.format(learning_rate),progress = np.array([-10]))
-    
-    return avgscores[0]
-
-def kill_bad_bots(margin):
-    refresh_max_avg_score()
-    avgscores = load_avg_scores()
-    bad_bot_tuples = [ bot_tuple for bot_tuple in avgscores if bot_tuple[0] <= margin]
-    print('{} Bots fall under the margin'.format(len(bad_bot_tuples)))
-    bad_bot_dir = [bbtuple[1] for bbtuple in bad_bot_tuples]
-    
-    for directory in bad_bot_dir:
-        shutil.rmtree(base_path + bot_dir + r'\{}'.format(directory))
-        print('Bot {} incinerated.'.format(directory))
-
-
-
-
-def resize_full_pool(full_pool_size = 1500):
-    refresh_max_avg_score()
-    avgscores = load_avg_scores()
-    oversize = len(avgscores) - full_pool_size
-    if oversize > 0:
-        avgscores.sort(key = lambda x: x[0])
-        for bot_tuple in avgscores[:oversize]:
-            shutil.rmtree(base_path + bot_dir + r'\{}'.format(bot_tuple[1]))
-            print('Bot {} had a score of {} and was incinerated.'.format(bot_tuple[1],np.round(bot_tuple[0])))
-    else:   
-        print('Full pool has size {} and is not oversized'.format(len(avgscores)))
-
-
-
-
-def load_score_dict(pool,entire_dir = False):
-    
-    if entire_dir:
-        print("Loading entire Dictionary")
-        path = base_path + bot_dir 
-        bot_dirnames = [dir for dir in os.listdir(path)]
-        if 'player_serial_number.txt' in bot_dirnames:
-            bot_dirnames.remove('player_serial_number.txt')
-        pool = load_pool(len(bot_dirnames))
-        
-    statdata = [0 for _ in range(len(pool))]
-    idx = 0 
-    for player in pool:
-        with np.load(player.player_dir + r'\stat_arr.npz',allow_pickle = True) as player_data:
-            statdata[idx] = (list(player_data['stats']),player.id)
-            idx += 1
-    dict = {statdata[_][1] : statdata[_][0] for _ in range(len(pool))}
-    return dict
-
-
-
-def match(tuple_arg,dictionary = None):
-    player_idx,current_pool,pool_size = tuple_arg
-
-    if dictionary == None:
-        try:
-            playerstats = load_score_dict(current_pool)
-            print("Score Dictionary Loaded")
-        except OSError:
-            print('OSERROR')
-            return
-        except BadZipFile:
-            print('Bad Zip File in match function')
-            integrity_check = refresh_max_avg_score(integrity_check = True)
-            return
-    elif not dictionary == None:
-        playerstats = dictionary
-    
-    for game in range(pool_size-1): #everyone plays a game with each other player 
-        game_pool = [current_pool[player_idx]]
-        for _ in range(3):#add the other 3 players
-            append_idx = (player_idx + game + _)%pool_size
-            if current_pool[append_idx] not in game_pool:
-                game_pool.append(current_pool[append_idx])
-            else:
-                game_pool.append(current_pool[(append_idx+1)%pool_size])
-
-                
-        play_game(game_pool)
-        for player in game_pool:
-             
-            playerstats[player.id].append(player.game_score)
-
-    if dictionary == None:
-        for player in current_pool:
-            np.savez(player.player_dir + r'\stat_arr.npz',stats = np.array(playerstats[player.id]))
-
-
-
-
-
-
-def training_session(pool_size = pool_size,learning_rate = learning_rate, n_clones = 0,entire_dir_bool = True,session = '_'):
-    refresh_player_serial_number()
-    current_pool = load_pool(pool_size)
-    for _ in range(1):
-        if entire_dir_bool:
-            entire_dir = load_score_dict(None,entire_dir = entire_dir_bool)
-        else:
-            entire_dir = None
             
-        print('Match Session {}'.format(_+1))
-        print('Learning Rate is', learning_rate)
-        print('Playing Magic Man...')
-        for player_idx in range(pool_size):
-            match((player_idx,current_pool,pool_size),dictionary = entire_dir)
-            progress = ((player_idx+1)/pool_size)*100
-            clear()
-            print('Learning Rate is', learning_rate)
-            print(' '+'_'*100)
-            print('|'*int(np.round(progress)+1) + '_'*int(np.round(100-progress))+'|')
-            print("{} %".format(np.round(progress,decimals=1)))
-            if n_clones > 0:
-                print("Cloning Session")
-            elif n_clones == 0:
-                print("Non-Cloning Session ({} more after this)".format(session))
-            if entire_dir_bool:
-                for player in current_pool:
-                    np.savez(player.player_dir + r'\stat_arr.npz',stats = np.array(entire_dir[player.id]))
-                    
-    refresh_attempts = 0
-    refresh_success  = False
-    while refresh_attempts <= 3 and not refresh_success:
-        try:
-            max_avgscore_tuple = refresh_max_avg_score(progress_bool = (True if n_clones > 0 else False))
-            refresh_success    = True
-        except:
-            print('Attempt {} failed to refresh maximum average score after training session finished.'.format(refresh_attempts))
-            attempts += 1
+    return species
+   
+   
+   
+def fitness (bots,species = {}):
+    """
+    ______
+    Input:
+        An average score estimate
+        the amount of specimen in the same species
+    ______
+    Output:
+        Nothing
+        Assigns the adjusted fitness to each bot
+    """
+    
+    for bot in bots:
+        bot_score,alpha = diagnostics.score_estim(2,bot.name) #2 is the width of the confidence band around the estim
+        assert alpha < 0.5, "The score estimate for {} is insignificant at a level of {}".format(bot.name,alpha) #check whether the estimate is reliable
+        bot.fitness = bot_score / len(species[bot.species]) #fitness fn as defined in the paper 
+
+
+
+def mutate_link(nn_genome):
+    """
+    ______
+    Input:
+        A Neural Net Genome 
+    ______
+    Output:
+        The input Genome with an added link Gene
+        The added Gene
+    ______
+        Adding links might add closed loops
+        st. A - B - C - A
+        To prevent this I'll test-activate the net and see if it works first
+        If it does not it will reset and mutate randomly until it does work
+    """
+
+    #in_nodes = [node for node in nn_node_genome if node["TYPE"] not "OUTPUT"]
+    out_nodes = [node for node in nn_node_genome if node["TYPE"] not "SENSOR"] #Sensor nodes have no recieving links from the nn
+    """
+    in_nodes:
+    Intuitively I'd say that an output node should not be connected to another output node,
+    but technically there is nothing wrong with that, so I'll leave it as a possibility.
+    """
+
     
     
-    print("Player {} has the maximum average score after the session and will be cloned.".format(max_avgscore_tuple[1]))
-    clone_success = False
-    clone_attempts = 0
-    while not clone_success and clone_attempts < 3:
-        try:
-            clone(Player(max_avgscore_tuple[1]),learning_rate,n_clones)
-            clone_success = True
-        except:
-            print('Attempt {} failed to clone after training session finished.'.format(clone_attempts))
-            clone_attempts += 1
+    nn_connection_genome.append(link_mutation :=
+                                {"IN": random.choice(nn_node_genome)["INDEX"],
+                                 "OUT":random.choice(out_nodes)["INDEX"],
+                                 "WEIGHT": np.random.normal(size = 1)[0],
+                                 "ENABLED":1,
+                                 "INNOVATION":"UNCONFIRMED"}) #bc the net might now be recursive
+    
+    return nn_connection_genome,link_mutation
 
 
 
+    
+def mutate_node(nn_node_genome,nn_connection_genome,net_type):
+    """
+    ______
+    Input:
+        A Neural Net's Node Genome and its Connection Genome
+        
+    ______
+    Output:
+        The input Genome with a disabled link,
+        an added node in its place and two new link genes
+        st. A - B becomes A - NEW - B
+        The Mutation to keep track within a generation
+    """
+    n_nodes = nn_node_genome[-1]["INDEX"]
+    #the index of the last added node (could also be len(nn_node_genome) but this is constant time)
 
+    nn_node_genome.append(new_node:={"INDEX" = n_nodes+1, "TYPE" = "HIDDEN"})
+
+    target_link_idx = np.random.randint(len(nn_connection_genome))
+    target_link     = nn_connection_genome[target_link_index]
+    nn_connection_genome[target_link_idx]["ENABLED"] = 0 #disable the target link
+    
+    in_connection,out_connection =  {"IN": target_link["IN"],
+                                     "OUT":new_node["INDEX"],
+                                     "WEIGHT":np.random.normal(size = 1)[0],
+                                     "ENABLED":1,
+                                     "INNOVATION":utils.increment_in(net_type)},
+                                    {"IN": new_node["INDEX"],
+                                     "OUT":target_link["OUT"],
+                                     "WEIGHT":np.random.normal(size = 1)[0],
+                                     "ENABLED":1,
+                                     "INNOVATION":utils.increment_in(net_type)}
+    
+    nn_connection_genome.append(in_connection)
+    nn_connection_genome.append(out_connection)
+
+    return nn_node_genome,nn_connection_genome,[in_connection,out_connection]
+
+def produce_offspring(parent_a_genome,parent_b_genome):
+    """
+    ______
+    Input:
+        two parent genomes
+    ______
+    Output:
+        offspring genome
+    """
+    pass
 
 if __name__ == "__main__": #so it doesnt run when imported
     print("Magic Man")
     bots = [Player(bot_name) for bot_name in utils.load_bot_names()]
-    gamepool = bots[:4]
-    game = Game(4,gamepool,deck.deck.copy())
-    game_pool_copy = gamepool.copy()
+    game_pool_copy = bots.copy()
     
-    #let them play 1000 games
-    for game_idx in range(1):
-        play_game(gamepool)
+    #let them play some games
+    for game_idx in range(5000):
+        random.shuffle(game_pool_copy)
+        play_game(game_pool_copy[:4])
     
         #show how the score behaves over those games
-        for player in gamepool:
+        for player in game_pool_copy[:4]:
             utils.add_score(player.name,player.game_score)
 
-    cProfile.run('utils.compatibility_mat(1,1,1)')
+        print(game_pool_copy[:4])
 
+
+        
+    species_repr = species_represent()
+    species_dict = speciation(1,1,1,1,bots,species_repr)
+    fitness(bots,species_dict)

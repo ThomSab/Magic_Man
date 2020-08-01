@@ -144,20 +144,20 @@ def increment_in(nn_type,directory=cwd):
     """
     ______
     Input:
-        nn_type
+        nn_type can be "bid" "play" "stm"
     ______
     Output:
-        None
+        The current global innovation number
         Increments the global innovation by one
     """
 
     try:
         with open(directory + r'\Bots\{}_innovation.json'.format(nn_type),'r') as innovation_file:#open mode 'w+' read AND writes a file
-            innovation_number = json.load(innovation_file)         
-            innovation_number += 1
+            old_in = json.load(innovation_file)         
+            incremented_in = old_in+1
         with open(directory + r'\Bots\{}_innovation.json'.format(nn_type),'w') as innovation_file:
-            json.dump(genome,innovation_file)
-        return
+            json.dump(incremented_in,innovation_file)
+        return old_in
             
     except Exception as exception:
         print("Incrementing the innovation number failed: {}".format(exception))
@@ -208,8 +208,9 @@ def nn_compatibility_distance(nn_genome_A,nn_genome_B,c_1,c_2,c_3):
     #How many genes the newer genome has that have a higher innovation number than the highest one from the older genome
     #this is E, the number of excess genes
         
-    nng_A_matching = [gene for gene in nn_genome_A if gene["INNOVATION"] in nng_B_history]
+    nng_A_matching = [gene for gene in nn_genome_A if gene["INNOVATION"] in nng_B_history] 
     nng_B_matching = [gene for gene in nn_genome_A if gene["INNOVATION"] in nng_A_history]
+    #this listcomp does take ~99% of the computing time according to the profiler
     
     disjoint_genes = (len(nng_A_history)-len(nng_A_matching)) + (len(nng_B_history)-len(nng_B_matching)) - excess_genes
     """
@@ -235,6 +236,7 @@ def compatibility_mat(c1,c2,c3):
     ______
     Output:
         Matrix containing the compatibility distances between all bots
+        first row is the comp. distance between bot_names[0] and all other bots in bot_names
     ______
         Since the distance doesn't have a direction,
         and the distance of a bot to itself is zero,
@@ -242,6 +244,9 @@ def compatibility_mat(c1,c2,c3):
         
         Nonetheless this funtion is incredibly slow
         This might not be feasible for large populations :(
+    ______
+        This function might be redundant since i dont have to calculate all distances
+        just the ones that i need to assign the specimen to a species
     """
     bot_names = load_bot_names()
     comp_mat = np.full((len(bot_names),len(bot_names)),np.NaN)
@@ -250,38 +255,32 @@ def compatibility_mat(c1,c2,c3):
                               for bot_name_b in bot_names[bot_idx+1::]]#bot_idx+1 s.t. the diagonal isn't calculated
 
     
-    return index_mat
-  
+    return bot_names,comp_mat
+    #passing bot list and the comp matrix seperately is not so nice
+    #but numpy arrays can not store string so this is more practical
 
-def speciation (compat_thresh,compat_mat,represent = []):
+
+
+def compatibility_search(bot,c1,c2,c3,compat_thresh,represent = {}):
     """
     ______
     Input:
-        The set compatibility threshold
-        and the compatibility matrix
+        A Player object, the species representatives
+        and the parameters for the compatibility distance function
+        (c1,c2,c3,delta)
     ______
     Output:
-        Assigns each specimen in the population a species
-    """
-    assert type(represent)==list,"Representative Genome was not passed as a list but as {}".format(type(represent))
-        
-    
-    pass
+        Returns species that is compatible with the genome of the input bot
+        Assigns the species to the bot
+    """    
+    for representative in represent:
+        if bot_compatibility_distance(load_bot_genome(bot),load_bot_genome(representative),c1,c2,c3) < compat_thresh:
+            bot.species = representative
+            return bot.species
+    return False
 
-  
-   
-def fitness (score,speciation):
-    """
-    ______
-    Input:
-        An average score estimate
-        the amount of specimen in the same species
-    ______
-    Output:
-        Adjusted fitness
-    """
-    
-    pass
+
+
     
     
     
