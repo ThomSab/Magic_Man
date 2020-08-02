@@ -74,7 +74,7 @@ class Player:
             print('{} loaded'.format(self.name))
             
         else:   
-            print("ERRROR: Player {} Directory does not exist.".format(name))
+            print("ERROR: Player {} Directory does not exist.".format(name))
             
 
             
@@ -100,7 +100,7 @@ class Player:
             #to have a better starting point for the bots
         self.current_bid = np.round(self.current_activation)
         if last_player:
-            if self.current_bid + np.sum([sensor_node.activation[0] + (round_idx/4) for sensor_node in self.bid_net.sensor_nodes[0:3]]) == round_idx:
+            if self.current_bid + np.sum([sensor_node.activation + (round_idx/4) for sensor_node in self.bid_net.sensor_nodes[0:3]]) == round_idx:
             #sensor nodes 0:3 are how high every player has bid including self
             #if the desired bid is not possible because the bids would add up to the number of cards in all hands
                 if self.current_activation - np.round(self.current_activation) > 0: #if bid value was rounded down
@@ -149,18 +149,22 @@ class Player:
         """
         def __init__ (self,node_genome,connection_genome,net_sigmoid_function):
             self.nodes = [self.Node(node["INDEX"],node["TYPE"],net_sigmoid_function) for node in node_genome]
-
-            #could also be a oneliner:
-            for node in self.nodes:
-                for connection in connection_genome:
-                    if connection["OUT"] == node.index and connection["ENABLED"]:
-                        node.lins.append({"node":self.nodes[connection["IN"]],"connection":connection})
-            #up to here --> but this seems more intuitive
-
             self.hidden_nodes = [ node for node in self.nodes if node.node_type == "HIDDEN"]
             self.output_nodes = [ node for node in self.nodes if node.node_type == "OUTPUT"]
             self.sensor_nodes = [ node for node in self.nodes if node.node_type == "SENSOR"]
-
+            
+            for node in self.output_nodes + self.hidden_nodes:
+                for connection in connection_genome:
+                    if connection["OUT"] == node.index and connection["ENABLED"]:
+                        local_input_node = [node for node in self.nodes if node.index == connection["IN"]][0]
+                        node.lins.append({"node":local_input_node,"connection":connection}) 
+            """
+            initally the index of the node was supposed to be its index in the node genome
+            but through mating a bot can have nodes that have a higher index than their index in the genome
+            e.g. node number 156 might be added after node 100 through mating
+            or node 145 after node 143
+            """
+            #lin generation could also be a onelinerup to here, but this seems more intuitive
   
         def activation (self):
             """
@@ -181,6 +185,7 @@ class Player:
             Ouput:
             activation of output nodes
             """
+            
             
             #clearing the non-sensor nodes
             for node in self.output_nodes + self.hidden_nodes:
@@ -209,20 +214,21 @@ class Player:
                 
             def node_activation(self):
                 """
-                Activation calculation is recursive in a way
-                The current node calls up other node's activation functions until
-                either the activation of the node is already known
-                or until an input node is reached.
-                
-                This has the neat (no pun intended) effect that the activation of redundant nodes is never calculated.
+                    Activation calculation is recursive in a way
+                    The current node calls up other node's activation functions until
+                    either the activation of the node is already known
+                    or until an input node is reached.
+                    
+                    This has the neat (no pun intended) effect that the activation of redundant nodes is never calculated.
                 
                 ________
                 Input:
-                Sigmoid function for the neural net
+                    Sigmoid function for the neural net
                 ________
                 Output:
-                The nodes activation
+                    The nodes activation
                 """
+
                 if self.activation is None:
                     #local_input_node or lin is a list of dictionarys [{"node":node,"connection":connection},...]
                     self.activation = self.sigmoid(sum([lin["connection"]["WEIGHT"]*lin["node"].node_activation() for lin in self.lins]))

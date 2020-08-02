@@ -109,8 +109,8 @@ def save_bot_genome(bot_name,genome,directory=cwd):
     with open(directory + r'\Bots\{}\genome.json'.format(bot_name),'w') as genome_file:
         try:
             json.dump(genome,genome_file)
-    except Exception as exception:
-        print("Saving {} genome failed: {}".format(bot_name,exception))
+        except Exception as exception:
+            print("Saving {} genome failed: {}".format(bot_name,exception))
 
 def load_bot_genome(bot_name,directory=cwd):
     with open(directory + r'\Bots\{}\genome.json'.format(bot_name),'r') as genome_file:

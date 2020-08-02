@@ -160,7 +160,7 @@ def mutate_link(nn_genome,net_type):
     """
 
     #in_nodes = [node for node in nn_node_genome if node["TYPE"] not "OUTPUT"]
-    out_nodes = [node for node in nn_node_genome if node["TYPE"] not "SENSOR"] #Sensor nodes have no recieving links from the nn
+    out_nodes = [node for node in nn_node_genome if node["TYPE"] != "SENSOR"] #Sensor nodes have no recieving links from the nn
     """
     in_nodes:
     Intuitively I'd say that an output node should not be connected to another output node,
@@ -200,7 +200,7 @@ def mutate_node(nn_node_genome,nn_connection_genome,net_type):
     #the index of the last added node
     #(could also be len(nn_node_genome) but this is constant time)
 
-    nn_node_genome.append(new_node:={"INDEX" = n_nodes+1, "TYPE" = "HIDDEN"})
+    nn_node_genome.append(new_node:={"INDEX" : n_nodes+1, "TYPE" : "HIDDEN"})
 
     target_link_idx = np.random.randint(len(nn_connection_genome))
     target_link     = nn_connection_genome[target_link_index]
@@ -211,11 +211,11 @@ def mutate_node(nn_node_genome,nn_connection_genome,net_type):
                                      "WEIGHT":np.random.normal(size = 1)[0],
                                      "ENABLED":1,
                                      "INNOVATION":utils.increment_in(net_type)},
-                                    {"IN": new_node["INDEX"],
-                                     "OUT":target_link["OUT"],
-                                     "WEIGHT":np.random.normal(size = 1)[0],
-                                     "ENABLED":1,
-                                     "INNOVATION":utils.increment_in(net_type)}
+    {"IN": new_node["INDEX"],
+     "OUT":target_link["OUT"],
+     "WEIGHT":np.random.normal(size = 1)[0],
+     "ENABLED":1,
+     "INNOVATION":utils.increment_in(net_type)}
     
     nn_connection_genome.append(in_connection)
     nn_connection_genome.append(out_connection)
@@ -265,8 +265,7 @@ def mutation_step(bot_name,link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh
 
         if any(mutate_list):
             bot_genome = utils.load_bot_genome(bot_name)
-            connection_genome,node_genome = bot_genome["{}_connection_genome".format(net)],
-                                            bot_genome["{}_node_genome".format(net)]
+            connection_genome,node_genome = bot_genome["{}_connection_genome".format(net)],bot_genome["{}_node_genome".format(net)]
             if link_mut:
                 connection_genome,link_mutation = mutate_link(connection_genome,net)
                 
@@ -302,9 +301,9 @@ if __name__ == "__main__": #so it doesnt run when imported
     print("Magic Man")
     bots = [Player(bot_name) for bot_name in utils.load_bot_names()]
     game_pool_copy = bots.copy()
-    
+
     #let them play some games
-    for game_idx in range(5000):
+    for game_idx in range(500):
         random.shuffle(game_pool_copy)
         play_game(game_pool_copy[:4])
     
@@ -314,8 +313,10 @@ if __name__ == "__main__": #so it doesnt run when imported
 
         print(game_pool_copy[:4])
 
-
+    cProfile.run("play_game(game_pool_copy[:4])")
         
     species_repr = species_represent()
     species_dict = speciation(1,1,1,1,bots,species_repr)
     fitness(bots,species_dict)
+
+    #diagnostics.graph('simone','bid')

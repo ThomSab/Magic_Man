@@ -2,6 +2,7 @@ import os
 import numpy as np
 import scipy.stats as stats
 import matplotlib.pyplot as plt
+import networkx as nx 
 import magic_man_utils as utils
 
 def score_estim(width,bot_name):
@@ -92,13 +93,33 @@ def maximum_score(width):
     
     
     
-def graph(bot_genome):
+def graph(bot_name,net_type):
     """
     TODO
     https://www.geeksforgeeks.org/python-visualize-graphs-generated-in-networkx-using-matplotlib/
     """
-    pass
+    """
+    ______
+    Input:
+        Bot Genome
+        Neural Net Type
+    ______
+    Output:
+        None
+        Plots graph of each a neural net in the bot genome
+    """
+    
+    bot_genome = utils.load_bot_genome(bot_name)
+    connection_genome = bot_genome["{}_connection_genome".format(net_type)]
     
     
+    nn_graph = nx.Graph()
+    for gene in connection_genome:
+        nn_graph.add_edge(gene["IN"],gene["OUT"])
+        
+
+    plt.figure(figsize =(100, 100)) 
+    nx.draw_planar(nn_graph, with_labels = True, node_color ='green')
+    plt.show()
     
     
