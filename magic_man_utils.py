@@ -105,6 +105,13 @@ def save_init_innovation(nn_type,init_innovation,directory=cwd):
 
 
 
+def save_bot_genome(bot_name,genome,directory=cwd):
+    with open(directory + r'\Bots\{}\genome.json'.format(bot_name),'w') as genome_file:
+        try:
+            json.dump(genome,genome_file)
+    except Exception as exception:
+        print("Saving {} genome failed: {}".format(bot_name,exception))
+
 def load_bot_genome(bot_name,directory=cwd):
     with open(directory + r'\Bots\{}\genome.json'.format(bot_name),'r') as genome_file:
         return json.load(genome_file)
@@ -124,6 +131,8 @@ def load_innovation_number(nn_type,directory=cwd):
     return json.load(open(directory + r'\Bots\{}_innovation.json'.format(nn_type),'r'))
 
 
+
+            
 def add_score (bot_name,add_score,directory=cwd):
     try:
         with open(directory + r'\Bots\{}\score.json'.format(bot_name),'r')as score_file: #open mode 'r' read 

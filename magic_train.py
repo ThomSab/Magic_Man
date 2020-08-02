@@ -143,7 +143,7 @@ def fitness (bots,species = {}):
 
 
 
-def mutate_link(nn_genome):
+def mutate_link(nn_genome,net_type):
     """
     ______
     Input:
@@ -156,7 +156,7 @@ def mutate_link(nn_genome):
         Adding links might add closed loops
         st. A - B - C - A
         To prevent this I'll test-activate the net and see if it works first
-        If it does not it will reset and mutate randomly until it does work
+        If it does not I'll find an appropriate solution for that
     """
 
     #in_nodes = [node for node in nn_node_genome if node["TYPE"] not "OUTPUT"]
@@ -174,7 +174,7 @@ def mutate_link(nn_genome):
                                  "OUT":random.choice(out_nodes)["INDEX"],
                                  "WEIGHT": np.random.normal(size = 1)[0],
                                  "ENABLED":1,
-                                 "INNOVATION":"UNCONFIRMED"}) #bc the net might now be recursive
+                                 "INNOVATION":utils.increment_in(net_type)}) #bc the net might now be recursive
     
     return nn_connection_genome,link_mutation
 
@@ -186,6 +186,8 @@ def mutate_node(nn_node_genome,nn_connection_genome,net_type):
     ______
     Input:
         A Neural Net's Node Genome and its Connection Genome
+        the net type in order to track innovation
+        -->can be "play" "stm" "bid"
         
     ______
     Output:
@@ -195,7 +197,8 @@ def mutate_node(nn_node_genome,nn_connection_genome,net_type):
         The Mutation to keep track within a generation
     """
     n_nodes = nn_node_genome[-1]["INDEX"]
-    #the index of the last added node (could also be len(nn_node_genome) but this is constant time)
+    #the index of the last added node
+    #(could also be len(nn_node_genome) but this is constant time)
 
     nn_node_genome.append(new_node:={"INDEX" = n_nodes+1, "TYPE" = "HIDDEN"})
 
@@ -217,8 +220,69 @@ def mutate_node(nn_node_genome,nn_connection_genome,net_type):
     nn_connection_genome.append(in_connection)
     nn_connection_genome.append(out_connection)
 
-    return nn_node_genome,nn_connection_genome,[in_connection,out_connection]
+    return nn_node_genome,nn_connection_genome,in_connection,out_connection
 
+
+
+def mutate_weights(connection_genome,random_weight_thresh):
+    """
+    ______
+    Input:
+        A Neural Net Connection Genome 
+    ______
+    Output:
+        The input Genome with all the weights mutated
+    """
+    random_mutation_list = [True if random_chance <= random_weight_thresh else False for random_chance in np.random.uniform(size=len(connection_genome))]
+    
+    for gene_idx,random_mutation in enumerate(random_mutation_list):
+        if random_mutation:
+            connection_genome[gene_idx]["WEIGHT"]  = np.random.normal(size = 1)[0]
+        else:
+            connection_genome[gene_idx]["WEIGHT"] += np.random.normal(size = 1)[0] #the paper says "uniformly perturbed" but its not exactly defined how
+    
+    return connection_genome
+
+
+
+    
+def mutation_step(bot_name,link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh=0.8,rand_weight_thresh=0.1):
+    """
+    ______
+    Input:
+        The name of the bot that is mutated
+        The probabilities for mutations to ocurr
+    ______
+    Output:
+        None
+        The bots genome is changed
+    """
+    for net in ["stm","bid","play"]:
+        
+        thresh_list = [link_thresh,node_thresh,weights_mut_thresh]
+        mutate_list = [ chance <= thresh_list[chance_idx] for chance_idx,chance in enumerate(np.random.uniform(size=3))]
+        link_mut,node_mut,weights_mut = mutate_list
+
+        if any(mutate_list):
+            bot_genome = utils.load_bot_genome(bot_name)
+            connection_genome,node_genome = bot_genome["{}_connection_genome".format(net)],
+                                            bot_genome["{}_node_genome".format(net)]
+            if link_mut:
+                connection_genome,link_mutation = mutate_link(connection_genome,net)
+                
+            if node_mut:
+                node_genome,connection_genome,in_mutation,out_mutation = mutate_node(node_genome,connection_genome,net)
+
+            if weights_mut:
+                connection_genome = mutate_weights(connection_genome,rand_weight_thresh)#does not need the net type bc no innovation numbers are incremented
+
+            bot_genome["{}_connection_genome".format(net)],
+            bot_genome["{}_node_genome".format(net)]         = connection_genome,node_genome
+    
+    utils.save_bot_genome(bot_name,bot_genome)
+
+
+   
 def produce_offspring(parent_a_genome,parent_b_genome):
     """
     ______
@@ -227,8 +291,12 @@ def produce_offspring(parent_a_genome,parent_b_genome):
     ______
     Output:
         offspring genome
+    ______
+        The weights of the more fit parent are kept
     """
     pass
+
+
 
 if __name__ == "__main__": #so it doesnt run when imported
     print("Magic Man")

@@ -32,14 +32,14 @@ def initial_genome(N_bid_sensors,N_bid_outputs,
 
     #these are oneliners
     #python i love u
-    bid_connections = [{"IN": sensor_idx, "OUT": output_idx,"WEIGHT": 0, "ENABLED": 1, "INNOVATION": N_bid_outputs*sensor_idx+output_idx+1}
-                        for sensor_idx in range(N_bid_sensors) for output_idx in range(N_bid_outputs)]
+    bid_connections = [{"IN": 1+sensor_idx, "OUT": 1+output_idx,"WEIGHT": 0, "ENABLED": 1, "INNOVATION": N_bid_outputs*sensor_idx+output_idx+1}
+                        for sensor_idx in range(N_bid_sensors) for output_idx in range(N_bid_sensors,(N_bid_sensors+N_bid_outputs))]
 
-    play_connections = [{"IN": sensor_idx, "OUT": output_idx,"WEIGHT": 0, "ENABLED": 1, "INNOVATION": N_play_outputs*sensor_idx+output_idx+1}
-                        for sensor_idx in range(N_play_sensors) for output_idx in range(N_play_outputs)]
+    play_connections = [{"IN": 1+sensor_idx, "OUT": 1+output_idx,"WEIGHT": 0, "ENABLED": 1, "INNOVATION": N_play_outputs*sensor_idx+output_idx+1}
+                        for sensor_idx in range(N_play_sensors) for output_idx in range(N_play_sensors,(N_play_sensors+N_play_outputs))]
 
-    stm_connections = [{"IN": sensor_idx, "OUT": output_idx,"WEIGHT": 0, "ENABLED": 1, "INNOVATION": N_stm_outputs*sensor_idx+output_idx+1}
-                        for sensor_idx in range(N_stm_sensors) for output_idx in range(N_stm_outputs)]
+    stm_connections = [{"IN": 1+sensor_idx, "OUT": 1+output_idx,"WEIGHT": 0, "ENABLED": 1, "INNOVATION": N_stm_outputs*sensor_idx+output_idx+1}
+                        for sensor_idx in range(N_stm_sensors) for output_idx in range(N_stm_sensors,(N_stm_sensors+N_stm_outputs))]
 
     return {
         "bid_node_genome"       :bid_sensors+bid_outputs,
