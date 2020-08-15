@@ -35,7 +35,7 @@ def score_estim(width,bot_name):
     return mean,alpha
     
 
-def avg_score_converge(bot_name):
+def score_converge(bot_name):
     """
     ______
     Input:
@@ -97,6 +97,7 @@ def graph(bot_name,net_type):
     """
     TODO
     https://www.geeksforgeeks.org/python-visualize-graphs-generated-in-networkx-using-matplotlib/
+    https://networkx.github.io/documentation/stable/_modules/networkx/drawing/nx_pylab.html#draw
     """
     """
     ______
@@ -107,19 +108,26 @@ def graph(bot_name,net_type):
     Output:
         None
         Plots graph of each a neural net in the bot genome
+    ______
+        The layout can be customized with nx.draw(nn_graph,pos = dictionary)
     """
     
     bot_genome = utils.load_bot_genome(bot_name)
     connection_genome = bot_genome["{}_connection_genome".format(net_type)]
-    
-    
-    nn_graph = nx.Graph()
-    for gene in connection_genome:
-        nn_graph.add_edge(gene["IN"],gene["OUT"])
-        
+    #node_genome = bot_genome["{}_node_genome".format(net_type)]
 
-    plt.figure(figsize =(100, 100)) 
-    nx.draw_planar(nn_graph, with_labels = True, node_color ='green')
+    init_innovation_number = utils.init_innovation_numbers[net_type]
+    
+    nn_graph = nx.DiGraph()
+    #nn_graph.add_nodes_from([node["INDEX"] for node in node_genome])
+    for gene in connection_genome:
+        if gene["INNOVATION"] > init_innovation_number:
+            nn_graph.add_edge(gene["IN"],gene["OUT"],weight = gene["WEIGHT"])
+    
+
+    nx.draw_planar(nn_graph,arrows = True,alpha=0.5)
+    nx.draw_networkx_labels(nn_graph,pos = nx.planar_layout(nn_graph))
+    
     plt.show()
     
     

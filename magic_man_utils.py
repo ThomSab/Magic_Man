@@ -5,7 +5,20 @@ import json
 import numpy as np
 from scipy.special import expit
 import os
+
+
+
 cwd = os.getcwd()
+N_bid_sensors  = 89
+N_bid_outputs  = 1
+N_play_sensors = 160
+N_play_outputs = 60
+N_stm_sensors  = 160
+N_stm_outputs  = 10
+init_list = [N_bid_sensors,N_bid_outputs,N_play_sensors,N_play_outputs,N_stm_sensors,N_stm_outputs]
+init_innovation_numbers = {'bid':N_bid_sensors*N_bid_outputs,'play':N_play_sensors*N_play_outputs,'stm':N_stm_sensors*N_stm_outputs}
+
+
 
 def logit_bidding (p):
     """
@@ -161,12 +174,11 @@ def increment_in(nn_type,directory=cwd):
     """
 
     try:
-        with open(directory + r'\Bots\{}_innovation.json'.format(nn_type),'r') as innovation_file:#open mode 'w+' read AND writes a file
-            old_in = json.load(innovation_file)         
-            incremented_in = old_in+1
+        with open(directory + r'\Bots\{}_innovation.json'.format(nn_type),'r') as innovation_file:#open mode 'w+' read AND writes a file    
+            incremented_in = json.load(innovation_file)[0]+1
         with open(directory + r'\Bots\{}_innovation.json'.format(nn_type),'w') as innovation_file:
-            json.dump(incremented_in,innovation_file)
-        return old_in
+            json.dump([incremented_in],innovation_file)
+        return incremented_in
             
     except Exception as exception:
         print("Incrementing the innovation number failed: {}".format(exception))
@@ -218,7 +230,7 @@ def nn_compatibility_distance(nn_genome_A,nn_genome_B,c_1,c_2,c_3):
     #this is E, the number of excess genes
         
     nng_A_matching = [gene for gene in nn_genome_A if gene["INNOVATION"] in nng_B_history] 
-    nng_B_matching = [gene for gene in nn_genome_A if gene["INNOVATION"] in nng_A_history]
+    nng_B_matching = [gene for gene in nn_genome_B if gene["INNOVATION"] in nng_A_history]
     #this listcomp does take ~99% of the computing time according to the profiler
     
     disjoint_genes = (len(nng_A_history)-len(nng_A_matching)) + (len(nng_B_history)-len(nng_B_matching)) - excess_genes
@@ -289,8 +301,53 @@ def compatibility_search(bot,c1,c2,c3,compat_thresh,represent = {}):
     return False
 
 
-
+def check_for_recursion(bot_connection_genome,initial_gene,current_gene=None):
+    """
+    ______
+    Input:
+        The initial gene whose addition is to be checked for recursion
+        A Neural Net Connection Genome WITHOUT THE NEW GENE IN IT
+        A Gene for a single connection for the bot that is requesting input
+        
+    ______
+    Output:
+        True if there are recursive sets of connections
+        False if there are no recursive sets of connections
+    ______
+        The function is recursive
+        it follows all connections leading into the initial gene
+        if on this journey through the net it happens to stumble upon itself
+        the function passes True through all previous function calls
+    """
+    if current_gene == None:
+        bot_connection_genome= bot_connection_genome.copy()
+        bot_connection_genome.append(initial_gene)
+        current_gene = initial_gene
     
+    for connection_gene in bot_connection_genome:
+        if connection_gene["OUT"] == current_gene["IN"]:
+            if connection_gene["INNOVATION"] == initial_gene["INNOVATION"]:
+                return True #connected to the initial gene --> recursion!!
+            elif check_for_recursion(bot_connection_genome,initial_gene,current_gene=connection_gene):
+                return True
+    return False
+    
+    
+    
+def check_for_connection_duplication(bot_connection_genome,connection_gene):
+    """
+    ______
+    Input:
+        A Neural Net Connection Genome
+        A Gene for a single connection for the bot
+    ______
+    Output:
+        Rrue if the connection is already in the net
+        False if the connection is new
+    """
+    if (dubs := [gene for gene in bot_connection_genome if (gene["IN"] == connection_gene["IN"] and gene["OUT"] == connection_gene["OUT"])]):
+        return dubs
+    return False
     
     
     

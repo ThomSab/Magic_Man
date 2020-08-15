@@ -157,14 +157,15 @@ class Player:
                 for connection in connection_genome:
                     if connection["OUT"] == node.index and connection["ENABLED"]:
                         local_input_node = [node for node in self.nodes if node.index == connection["IN"]][0]
-                        node.lins.append({"node":local_input_node,"connection":connection}) 
+                        node.lins.append({"node":local_input_node,"connection":connection})             
+            #lin generation could also be a onelinerup to here, but this seems more intuitive
+
             """
             initally the index of the node was supposed to be its index in the node genome
-            but through mating a bot can have nodes that have a higher index than their index in the genome
-            e.g. node number 156 might be added after node 100 through mating
+            but through mating/mutation a bot can have nodes that have a higher index than their index in the genome
+            e.g. node number 156 might be added after node 100 through mating/mutation
             or node 145 after node 143
             """
-            #lin generation could also be a onelinerup to here, but this seems more intuitive
   
         def activation (self):
             """

@@ -90,7 +90,7 @@ def species_represent(species_last_gen=None):
 
 
 
-def speciation (c1,c2,c3,compat_thresh,bots,species = {}):
+def speciation (bots,c1=1,c2=1,c3=0.4,compat_thresh=3,species = {}):
     """
     ______
     Input:
@@ -116,10 +116,9 @@ def speciation (c1,c2,c3,compat_thresh,bots,species = {}):
         if utils.compatibility_search(bot,c1,c2,c3,compat_thresh,species):#comp_search assigns the species to the bot but not the bot to the species dict
             species[bot.species].append(bot.name)
         else:
+            bot.species = bot.name
             species[bot.name] = [bot.name] #new representative
-   
 
-            
     return species
    
    
@@ -143,7 +142,7 @@ def fitness (bots,species = {}):
 
 
 
-def mutate_link(nn_genome,net_type):
+def mutate_link(nn_node_genome,nn_connection_genome,net_type):
     """
     ______
     Input:
@@ -159,23 +158,37 @@ def mutate_link(nn_genome,net_type):
         If it does not I'll find an appropriate solution for that
     """
 
-    #in_nodes = [node for node in nn_node_genome if node["TYPE"] not "OUTPUT"]
-    out_nodes = [node for node in nn_node_genome if node["TYPE"] != "SENSOR"] #Sensor nodes have no recieving links from the nn
+    hidden_nodes_idx = [node["INDEX"] for node in nn_node_genome if node["TYPE"] == "HIDDEN"]
+    output_nodes_idx = [node["INDEX"] for node in nn_node_genome if node["TYPE"] == "OUTPUT"]
+
     """
     in_nodes:
     Intuitively I'd say that an output node should not be connected to another output node,
     but technically there is nothing wrong with that, so I'll leave it as a possibility.
     """
+ 
+    
+    link_mutation = {"IN": random.choice(nn_node_genome)["INDEX"],
+                     "OUT":random.choice(output_nodes_idx+hidden_nodes_idx),
+                     "WEIGHT": np.random.normal(size = 1)[0],
+                     "ENABLED":1,
+                     "INNOVATION":utils.increment_in(net_type)}
+
 
     
     
-    nn_connection_genome.append(link_mutation :=
-                                {"IN": random.choice(nn_node_genome)["INDEX"],
-                                 "OUT":random.choice(out_nodes)["INDEX"],
-                                 "WEIGHT": np.random.normal(size = 1)[0],
-                                 "ENABLED":1,
-                                 "INNOVATION":utils.increment_in(net_type)}) #bc the net might now be recursive
+    if utils.check_for_recursion(nn_connection_genome,link_mutation):#bc now the net might be recursive
+        print("Recursive Mutation prevented")
+        return mutate_link(nn_node_genome,nn_connection_genome,net_type)
+
+    elif (duplication := utils.check_for_connection_duplication(nn_connection_genome,link_mutation)):
+        for gene in duplication:
+            nn_connection_genome.remove(gene)
+            print("Removed old ", net_type ," gene: ", gene)
+            print("Replaced it with: ", link_mutation)
+            
     
+    nn_connection_genome.append(link_mutation)
     return nn_connection_genome,link_mutation
 
 
@@ -203,23 +216,25 @@ def mutate_node(nn_node_genome,nn_connection_genome,net_type):
     nn_node_genome.append(new_node:={"INDEX" : n_nodes+1, "TYPE" : "HIDDEN"})
 
     target_link_idx = np.random.randint(len(nn_connection_genome))
-    target_link     = nn_connection_genome[target_link_index]
+    target_link     = nn_connection_genome[target_link_idx]
     nn_connection_genome[target_link_idx]["ENABLED"] = 0 #disable the target link
     
-    in_connection,out_connection =  {"IN": target_link["IN"],
+    in_connection,out_connection =  ({"IN": target_link["IN"],
                                      "OUT":new_node["INDEX"],
                                      "WEIGHT":np.random.normal(size = 1)[0],
                                      "ENABLED":1,
                                      "INNOVATION":utils.increment_in(net_type)},
-    {"IN": new_node["INDEX"],
-     "OUT":target_link["OUT"],
-     "WEIGHT":np.random.normal(size = 1)[0],
-     "ENABLED":1,
-     "INNOVATION":utils.increment_in(net_type)}
+                                     {"IN": new_node["INDEX"],
+                                     "OUT":target_link["OUT"],
+                                     "WEIGHT":np.random.normal(size = 1)[0],
+                                     "ENABLED":1,
+                                     "INNOVATION":utils.increment_in(net_type)})
     
     nn_connection_genome.append(in_connection)
     nn_connection_genome.append(out_connection)
 
+    print("Added a new node: ",new_node)
+    
     return nn_node_genome,nn_connection_genome,in_connection,out_connection
 
 
@@ -258,7 +273,6 @@ def mutation_step(bot_name,link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh
         The bots genome is changed
     """
     for net in ["stm","bid","play"]:
-        
         thresh_list = [link_thresh,node_thresh,weights_mut_thresh]
         mutate_list = [ chance <= thresh_list[chance_idx] for chance_idx,chance in enumerate(np.random.uniform(size=3))]
         link_mut,node_mut,weights_mut = mutate_list
@@ -266,8 +280,9 @@ def mutation_step(bot_name,link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh
         if any(mutate_list):
             bot_genome = utils.load_bot_genome(bot_name)
             connection_genome,node_genome = bot_genome["{}_connection_genome".format(net)],bot_genome["{}_node_genome".format(net)]
+
             if link_mut:
-                connection_genome,link_mutation = mutate_link(connection_genome,net)
+                connection_genome,link_mutation = mutate_link(node_genome,connection_genome,net)
                 
             if node_mut:
                 node_genome,connection_genome,in_mutation,out_mutation = mutate_node(node_genome,connection_genome,net)
@@ -275,14 +290,55 @@ def mutation_step(bot_name,link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh
             if weights_mut:
                 connection_genome = mutate_weights(connection_genome,rand_weight_thresh)#does not need the net type bc no innovation numbers are incremented
 
-            bot_genome["{}_connection_genome".format(net)],
-            bot_genome["{}_node_genome".format(net)]         = connection_genome,node_genome
+            bot_genome["{}_connection_genome".format(net)]   = connection_genome
+            bot_genome["{}_node_genome".format(net)]         = node_genome
     
-    utils.save_bot_genome(bot_name,bot_genome)
+            utils.save_bot_genome(bot_name,bot_genome)
 
 
+
+def produce_net_connection_offspring(fit_connection_genome,flop_connection_genome):
+    """
+    ______
+    Input:
+        two parent connection genomes
+    ______
+    Output:
+        offspring neural net connection genome
+
+    """
+    flop_excess_connections = [gene for gene in flop_connection_genome if gene not in fit_connection_genome]
+    #sets are three times as fast as list comprehensions but dictionarys are unhasheable
+    offspring_connection_genome = fit_connection_genome + flop_excess_connections
+    offspring_connection_genome.sort(key = lambda x : x["INNOVATION"])
+    
+    return offspring_connection_genome
+
+
+
+
+def produce_net_node_offspring(fit_node_genome,flop_node_genome):
+    """
+    ______
+    Input:
+        two parent node genomes
+    ______
+    Output:
+        offspring neural net node genome
+    """
+    flop_excess_nodes = [gene for gene in flop_node_genome if gene not in fit_node_genome]
+    #sets are three times as fast as list comprehensions but dictionarys are unhasheable
+    offspring_node_genome = fit_node_genome + flop_excess_nodes
+    offspring_node_genome.sort(key = lambda x : x["INDEX"])
    
-def produce_offspring(parent_a_genome,parent_b_genome):
+    return offspring_node_genome
+
+
+
+#   CHECK FOR RECURSIVE CONNECTIONS
+#   CHECK FOR RECURSIVE CONNECTIONS
+#   CHECK FOR RECURSIVE CONNECTIONS   
+def produce_offspring(parent_a,parent_b):
     """
     ______
     Input:
@@ -292,9 +348,101 @@ def produce_offspring(parent_a_genome,parent_b_genome):
         offspring genome
     ______
         The weights of the more fit parent are kept
+        To achieve this it is possible to just
+        add the genes that are unique to the flop genome to the fit genome
+        
     """
+    #   CHECK FOR RECURSIVE CONNECTIONS
+    #   CHECK FOR RECURSIVE CONNECTIONS
+    #   CHECK FOR RECURSIVE CONNECTIONS
+    
+    fit_parent,flop_parent = sorted([parent_a,parent_b],key=lambda x : x.fitness,reverse = True) #reverse sort is from highest to lowest
+    fit_genome,flop_genome = utils.load_bot_genome(fit_parent.name),utils.load_bot_genome(flop_parent.name)
+
+    offspring_genome = fit_genome
+
+    for net in ['play','bid','stm']:
+        fit_connection_genome,flop_connection_genome = fit_genome["{}_connection_genome".format(net)],flop_genome["{}_connection_genome".format(net)]
+        fit_node_genome,flop_node_genome = fit_genome["{}_node_genome".format(net)],flop_genome["{}_node_genome".format(net)]
+        
+        offspring_genome["{}_connection_genome".format(net)] = produce_net_connection_offspring(fit_connection_genome,flop_connection_genome)
+        offspring_genome["{}_node_genome".format(net)]       = produce_net_node_offspring(fit_node_genome,flop_node_genome)
+
+    return offspring_genome
+#   CHECK FOR RECURSIVE CONNECTIONS
+#   CHECK FOR RECURSIVE CONNECTIONS
+#   CHECK FOR RECURSIVE CONNECTIONS
+
+
+
+
+def play_to_significance(alpha):
+    """
+    ______
+    Input:
+        bots
+        significance value
+    ______
+    Output:
+        none
+    ______
+        makes the bots play until each of their score values has
+        a significance value of alpha or lower
+    """    
     pass
 
+def reproduce(bots):
+    """
+    ______
+    Input:
+        one species of bots
+    ______
+    Output:
+        new set of bots of the same size as the input set
+    ______
+        makes the species of bots reproduce into a new set of bots
+        25% of offspring is not crossover i.e. only mutations
+        There is no specification as to who mate with who
+        The better the score the more offspring a bot produces
+        So the first produces another 37.5% of the offspring each
+        the Second produces another 18.75%, third produces 9.375% etc.
+    """
+    new_generation = []
+    gen_size = len(bots)
+    bots.sort(key = lambda bot: bot.fitness,reverse = True)
+    
+    for _ in range(np.round(gen_size*0.25)): 
+        new_generation.append(bots[_])
+
+    percentage = 0.75  
+    for bot in bots:
+        utils.save_init_genome(offspring_name, produce_offspring(bot,random.choice(bots)))    
+    
+    
+    pass
+
+def generation(previous_species,bots,significance_val):
+    """
+    ______
+    Input:
+        old generation:
+        previous_species ( last generations species )
+        
+    ______
+    Output:
+        new generation
+    ______
+        Basically main: All functions are called st.:
+        The Members of the current species train until their scores are significant
+        The fittest members then reproduce and mutate
+        
+    """
+    play_to_significance(significance_val)
+    species_representatives = species_represent(previous_species)
+    species = speciation(bots=bots,species = previous_representatives)
+    fitness(bots = bots,species = species)
+    
+    pass
 
 
 if __name__ == "__main__": #so it doesnt run when imported
@@ -302,8 +450,15 @@ if __name__ == "__main__": #so it doesnt run when imported
     bots = [Player(bot_name) for bot_name in utils.load_bot_names()]
     game_pool_copy = bots.copy()
 
+    for _ in range(5):
+        for bot in bots:
+            mutation_step(bot.name,link_thresh = 0.5,node_thresh = 0.3)
+            print(_,bot)
+
+    
+ 
     #let them play some games
-    for game_idx in range(500):
+    for game_idx in range(50):
         random.shuffle(game_pool_copy)
         play_game(game_pool_copy[:4])
     
@@ -311,12 +466,30 @@ if __name__ == "__main__": #so it doesnt run when imported
         for player in game_pool_copy[:4]:
             utils.add_score(player.name,player.game_score)
 
-        print(game_pool_copy[:4])
+        print(game_idx,game_pool_copy[:4])
 
-    cProfile.run("play_game(game_pool_copy[:4])")
-        
-    species_repr = species_represent()
-    species_dict = speciation(1,1,1,1,bots,species_repr)
-    fitness(bots,species_dict)
 
-    #diagnostics.graph('simone','bid')
+    """
+    species = speciation(bots=bots,species = species_represent())
+    fitness(bots=bots,species = species)
+    
+    for net_type in ['play','stm','bid']:
+        diagnostics.graph(bots[0].name,net_type)
+        diagnostics.graph(bots[1].name,net_type)
+
+    offspring_genome = produce_offspring(bots[0],bots[1])
+    utils.save_init_genome('offspring', offspring_genome)
+
+    offspring = Player('offspring')
+    
+    for net_type in ['play','stm','bid']:
+        diagnostics.graph(offspring.name,net_type)
+    """
+    
+    
+"""
+The profiler estimates a game to take ~6.7 sec
+Back-of-the-envelope estimation:
+6.7 seconds * ~2500 games to significance * 150 specimen / 4 scores per game * ~200 generations = 
+125625000 seconds or about 4 years
+"""
