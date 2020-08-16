@@ -78,8 +78,8 @@ def species_represent(species_last_gen=None):
     species_current_gen = {}
 
     if species_last_gen != None:      
-        for species in species_last_gen:
-            representative_name = random.choice(load_bot_names())
+        for representative,species in species_last_gen.items():
+            representative_name = random.choice(species)
             species_current_gen[representative_name] = [representative_name]
             return species_current_gen
     else:
@@ -335,9 +335,7 @@ def produce_net_node_offspring(fit_node_genome,flop_node_genome):
 
 
 
-#   CHECK FOR RECURSIVE CONNECTIONS
-#   CHECK FOR RECURSIVE CONNECTIONS
-#   CHECK FOR RECURSIVE CONNECTIONS   
+  
 def produce_offspring(parent_a,parent_b):
     """
     ______
@@ -352,9 +350,6 @@ def produce_offspring(parent_a,parent_b):
         add the genes that are unique to the flop genome to the fit genome
         
     """
-    #   CHECK FOR RECURSIVE CONNECTIONS
-    #   CHECK FOR RECURSIVE CONNECTIONS
-    #   CHECK FOR RECURSIVE CONNECTIONS
     
     fit_parent,flop_parent = sorted([parent_a,parent_b],key=lambda x : x.fitness,reverse = True) #reverse sort is from highest to lowest
     fit_genome,flop_genome = utils.load_bot_genome(fit_parent.name),utils.load_bot_genome(flop_parent.name)
@@ -368,19 +363,41 @@ def produce_offspring(parent_a,parent_b):
         offspring_genome["{}_connection_genome".format(net)] = produce_net_connection_offspring(fit_connection_genome,flop_connection_genome)
         offspring_genome["{}_node_genome".format(net)]       = produce_net_node_offspring(fit_node_genome,flop_node_genome)
 
+    #check for recursive structure in the connection genome
+    for connection_gene in offspring_genome["{}_connection_genome".format(net)]:
+        if check_for_recursion(offspring_genome["{}_connection_genome".format(net)],
+                            initial_gene = connection_gene,current_gene=connection_gene):
+            return False
+
     return offspring_genome
-#   CHECK FOR RECURSIVE CONNECTIONS
-#   CHECK FOR RECURSIVE CONNECTIONS
-#   CHECK FOR RECURSIVE CONNECTIONS
 
 
-
-
-def play_to_significance(alpha):
+def seperate_pool(species,seperations):
     """
     ______
     Input:
-        bots
+        species for this generation
+        number of seperations in the pool
+    ______
+    Output:
+        A dictionary that contains that "seperations" seperate sets of bots
+        With similar composition of species
+    ______
+        makes the bots play until each of their score values has
+        a significance value of alpha or lower
+    """    
+
+
+    #TODO
+    pass
+
+
+
+def play_to_significance(bots,width=10,alpha_thresh=0.1):
+    """
+    ______
+    Input:
+        significance interval
         significance value
     ______
     Output:
@@ -389,16 +406,46 @@ def play_to_significance(alpha):
         makes the bots play until each of their score values has
         a significance value of alpha or lower
     """    
-    pass
 
-def reproduce(bots):
+    below_alpha,above_alpha = [],bots
+    
+    while len(above_alpha)>=4:
+        mean,alpha = diagnostics.score_estim(width,(above_bot := above_alpha[0]).name)
+        if alpha < alpha_thresh:
+            below_alpha.append(above_alpha.pop(0))
+        else:
+            print( f"{above_alpha[0].name}'s score estimate of {np.round(mean,2)} has a {np.round(alpha*100,2)}% chance of being off by more than {width}")
+            above_alpha_copy = above_alpha.copy()
+            above_alpha_copy.remove(above_bot)
+            #let them play some games
+            for game_idx in range(int(alpha*(10*width/alpha_thresh))):
+            #10 just so happens to be the constant that is approximately appropriate
+            #the closer the alpha is the fewer games the bot has to play to significance
+            #this is a rough estimate and can be made more precise
+                random.shuffle(above_alpha_copy)
+                game_pool = [above_bot]+above_alpha_copy[:3]
+            
+                play_game(game_pool)
+            
+                #show how the score behaves over those games
+                for player in game_pool:
+                    utils.add_score(player.name,player.game_score)
+
+                print(game_idx,game_pool)
+    
+    print("Significance achieved")
+    return True
+    
+    
+
+def reproduce(bot_species):
     """
     ______
     Input:
         one species of bots
     ______
     Output:
-        new set of bots of the same size as the input set
+        names of the new set of bots of the same size as the input set
     ______
         makes the species of bots reproduce into a new set of bots
         25% of offspring is not crossover i.e. only mutations
@@ -408,20 +455,25 @@ def reproduce(bots):
         the Second produces another 18.75%, third produces 9.375% etc.
     """
     new_generation = []
-    gen_size = len(bots)
-    bots.sort(key = lambda bot: bot.fitness,reverse = True)
+    species_size = len(bot_species)
+    bot_species.sort(key = lambda bot: bot.fitness,reverse = True)
+    bots = bot_species[:np.round(0.1*species_size)] #the worst 10% are eliminated
     
     for _ in range(np.round(gen_size*0.25)): 
         new_generation.append(bots[_])
 
-    percentage = 0.75  
+    percentage = 0.375 
     for bot in bots:
-        utils.save_init_genome(offspring_name, produce_offspring(bot,random.choice(bots)))    
+        offspring_count = 0
+        while offspring_count/species_size <= percentage and np.round(percentage*gen_size) > 1:
+            if (offspring_genome := produce_offspring(bot,random.choice(bots))):
+                utils.save_init_genome(offspring_name, produce_offspring(bot,random.choice(bots)))
+                new_generation.append(offspring_name)
+    percentage /= 2
     
-    
-    pass
+    return new_generation
 
-def generation(previous_species,bots,significance_val):
+def generation(bots,species,significance_val):#mutation parameters!!
     """
     ______
     Input:
@@ -430,61 +482,36 @@ def generation(previous_species,bots,significance_val):
         
     ______
     Output:
-        new generation
+        the species representatives of the new generation
+        the new bots need not be returned as they are saved as genomes
+        and will have to be loaded anyways in the next gen
     ______
         Basically main: All functions are called st.:
         The Members of the current species train until their scores are significant
         The fittest members then reproduce and mutate
         
     """
-    play_to_significance(significance_val)
-    species_representatives = species_represent(previous_species)
-    species = speciation(bots=bots,species = previous_representatives)
-    fitness(bots = bots,species = species)
     
-    pass
+    bots = [Player(bot_name) for bot_name in utils.load_bot_names()]
+    play_to_significance(bots,significance_val)
+    fitness(bots = bots,species = species)
+        
+    for representative,species_item in species.items():
+        species[representative] = reproduce(species_item)
+        for bot in species[representative]:
+            mutation_step(bot)#parameters
+            
+    
+    species_representatives = species_represent(species)
+    new_species = speciation(bots=bots,species = species_representatives)    
+    
+    return new_species
 
 
 if __name__ == "__main__": #so it doesnt run when imported
     print("Magic Man")
-    bots = [Player(bot_name) for bot_name in utils.load_bot_names()]
-    game_pool_copy = bots.copy()
+    #play_to_significance()
 
-    for _ in range(5):
-        for bot in bots:
-            mutation_step(bot.name,link_thresh = 0.5,node_thresh = 0.3)
-            print(_,bot)
-
-    
- 
-    #let them play some games
-    for game_idx in range(50):
-        random.shuffle(game_pool_copy)
-        play_game(game_pool_copy[:4])
-    
-        #show how the score behaves over those games
-        for player in game_pool_copy[:4]:
-            utils.add_score(player.name,player.game_score)
-
-        print(game_idx,game_pool_copy[:4])
-
-
-    """
-    species = speciation(bots=bots,species = species_represent())
-    fitness(bots=bots,species = species)
-    
-    for net_type in ['play','stm','bid']:
-        diagnostics.graph(bots[0].name,net_type)
-        diagnostics.graph(bots[1].name,net_type)
-
-    offspring_genome = produce_offspring(bots[0],bots[1])
-    utils.save_init_genome('offspring', offspring_genome)
-
-    offspring = Player('offspring')
-    
-    for net_type in ['play','stm','bid']:
-        diagnostics.graph(offspring.name,net_type)
-    """
     
     
 """

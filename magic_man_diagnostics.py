@@ -10,11 +10,11 @@ def score_estim(width,bot_name):
     ______
     Input:
         bot name
-        width, the width of the confidence band around the estimate
+        width, the width of the confidence band around the estimate to each side
     ______
     Output:
         Returns an estimate for the real mean score of the bot
-        and an alpha value, the probability that the real mean score is outside of the confidence band around the estimate
+        and an alpha value, the probability that the score estimate is off by more than width
         
     ______
         The real mean score is unknown since the game involves quite a bit of luck
@@ -24,13 +24,14 @@ def score_estim(width,bot_name):
         I assume the scores to be normally distributed around the mean.
         I can then estimate the probability of the real mean being within
         a set confidence band around the estimated mean
+        
     """
     bot_score = utils.load_bot_score(bot_name)
     mean,std = np.mean(bot_score),np.std(bot_score)
     
     #std deviation of the mean is the sample mean over the root of n
     #the confidence depends then depends on the width entered
-    alpha = 1 - stats.norm.cdf((width/2)*np.sqrt(len(bot_score))/std)
+    alpha = 1 - stats.norm.cdf((width)*np.sqrt(len(bot_score))/std)
     
     return mean,alpha
     
@@ -46,6 +47,9 @@ def score_converge(bot_name):
     
     """
     bot_score = utils.load_bot_score(bot_name)
+    plt.title(f"{bot_name} Score convergence")
+    plt.xlabel("Games Played")
+    plt.ylabel("Average Score")
     plt.plot([np.mean(bot_score[:t+1]) for t in range(len(bot_score))],label = 'AVG over time')
     plt.axhline(np.mean(bot_score),color = 'r',label = 'Current AVG {}'.format(np.round(np.mean(bot_score),2)))
     plt.legend()
@@ -62,7 +66,9 @@ def score_hist(bot_name):
     
     """
     bot_score = utils.load_bot_score(bot_name)
-    plt.hist(bot_score,bins=90,range=(-400,500))
+    plt.title(f"{bot_name} Score histogram")
+    plt.xlabel("Score")
+    plt.hist(bot_score,bins=120,range=(-600,600))
     plt.axvline(np.mean(bot_score),color='r',label='Current AVG {}'.format(np.round(np.mean(bot_score)),2))
     plt.legend()
     plt.show()
@@ -128,6 +134,7 @@ def graph(bot_name,net_type):
     nx.draw_planar(nn_graph,arrows = True,alpha=0.5)
     nx.draw_networkx_labels(nn_graph,pos = nx.planar_layout(nn_graph))
     
+    plt.title(f"{bot_name} Added Graph Structure in {net_type} net")
     plt.show()
     
     
