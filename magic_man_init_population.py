@@ -58,7 +58,7 @@ stm_iin  = [ ((N_stm_outputs) *N_stm_sensors)  ]
 
 
 if __name__ == "__main__":
-    for player in ['josh', 'andrew', 'jasper', 'philip', 'paul','greg','norbert','undine','simone','julius']:
+    for player in utils.load_empty_bot_names():
         utils.save_init_genome(player,
             init_genome = initial_genome(N_bid_sensors,N_bid_outputs,N_play_sensors,N_play_outputs,N_stm_sensors,N_stm_outputs))
         utils.save_init_score(player,0)

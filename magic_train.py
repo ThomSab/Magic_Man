@@ -78,9 +78,9 @@ def species_represent(species_last_gen=None):
     species_current_gen = {}
 
     if species_last_gen != None:      
-        for representative,species in species_last_gen.items():
-            representative_name = random.choice(species)
-            species_current_gen[representative_name] = [representative_name]
+        for init_representative,species in species_last_gen.items():
+            new_representative_name = random.choice(species)
+            species_current_gen[init_representative] = [new_representative_name]
             return species_current_gen
     else:
         print("First Generation, no seperate Species...\n")
@@ -111,10 +111,11 @@ def speciation (bots,c1=1,c2=1,c3=0.4,compat_thresh=3,species = {}):
     """
     assert type(species)==dict,"Representative Genome was not passed as a dictionary but as {}".format(type(represent))
     assert species
-        
+
+    print("Speciation")
     for bot in bots:
         if utils.compatibility_search(bot,c1,c2,c3,compat_thresh,species):#comp_search assigns the species to the bot but not the bot to the species dict
-            species[bot.species].append(bot.name)
+            species[bot.species].append(bot.name)# from object to name
         else:
             bot.species = bot.name
             species[bot.name] = [bot.name] #new representative
@@ -183,10 +184,8 @@ def mutate_link(nn_node_genome,nn_connection_genome,net_type):
 
     elif (duplication := utils.check_for_connection_duplication(nn_connection_genome,link_mutation)):
         for gene in duplication:
-            nn_connection_genome.remove(gene)
-            print("Removed old ", net_type ," gene: ", gene)
-            print("Replaced it with: ", link_mutation)
-            
+            print(f"Connection already exists at innovation {gene['INNOVATION']}")
+            return nn_connection_genome,None
     
     nn_connection_genome.append(link_mutation)
     return nn_connection_genome,link_mutation
@@ -239,14 +238,17 @@ def mutate_node(nn_node_genome,nn_connection_genome,net_type):
 
 
 
-def mutate_weights(connection_genome,random_weight_thresh):
+def mutate_weights(connection_genome,random_weight_thresh,pert_rate):
     """
     ______
     Input:
-        A Neural Net Connection Genome 
+        A Neural Net Connection Genome
+        The probability threshold above which the weight is set randomly
+        instead of being perturbed
+        The strength of perturbation
     ______
     Output:
-        The input Genome with all the weights mutated
+        The input Genome with all the weights mutated or perturbed
     """
     random_mutation_list = [True if random_chance <= random_weight_thresh else False for random_chance in np.random.uniform(size=len(connection_genome))]
     
@@ -254,14 +256,14 @@ def mutate_weights(connection_genome,random_weight_thresh):
         if random_mutation:
             connection_genome[gene_idx]["WEIGHT"]  = np.random.normal(size = 1)[0]
         else:
-            connection_genome[gene_idx]["WEIGHT"] += np.random.normal(size = 1)[0] #the paper says "uniformly perturbed" but its not exactly defined how
+            connection_genome[gene_idx]["WEIGHT"] += np.random.normal(loc=0,scale=pert_rate,size = 1)[0] #the paper says "uniformly perturbed" but its not exactly defined how
     
     return connection_genome
 
 
 
     
-def mutation_step(bot_name,link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh=0.8,rand_weight_thresh=0.1):
+def mutation_step(bot_name,link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh=0.8,rand_weight_thresh=0.1,pert_rate=0.1):
     """
     ______
     Input:
@@ -288,7 +290,7 @@ def mutation_step(bot_name,link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh
                 node_genome,connection_genome,in_mutation,out_mutation = mutate_node(node_genome,connection_genome,net)
 
             if weights_mut:
-                connection_genome = mutate_weights(connection_genome,rand_weight_thresh)#does not need the net type bc no innovation numbers are incremented
+                connection_genome = mutate_weights(connection_genome,rand_weight_thresh,pert_rate=pert_rate)#does not need the net type bc no innovation numbers are incremented
 
             bot_genome["{}_connection_genome".format(net)]   = connection_genome
             bot_genome["{}_node_genome".format(net)]         = node_genome
@@ -311,6 +313,9 @@ def produce_net_connection_offspring(fit_connection_genome,flop_connection_genom
     #sets are three times as fast as list comprehensions but dictionarys are unhasheable
     offspring_connection_genome = fit_connection_genome + flop_excess_connections
     offspring_connection_genome.sort(key = lambda x : x["INNOVATION"])
+
+        
+
     
     return offspring_connection_genome
 
@@ -363,9 +368,11 @@ def produce_offspring(parent_a,parent_b):
         offspring_genome["{}_connection_genome".format(net)] = produce_net_connection_offspring(fit_connection_genome,flop_connection_genome)
         offspring_genome["{}_node_genome".format(net)]       = produce_net_node_offspring(fit_node_genome,flop_node_genome)
 
+    
+
     #check for recursive structure in the connection genome
     for connection_gene in offspring_genome["{}_connection_genome".format(net)]:
-        if check_for_recursion(offspring_genome["{}_connection_genome".format(net)],
+        if utils.check_for_recursion(offspring_genome["{}_connection_genome".format(net)],
                             initial_gene = connection_gene,current_gene=connection_gene):
             return False
 
@@ -393,7 +400,7 @@ def seperate_pool(species,seperations):
 
 
 
-def play_to_significance(bots,width=10,alpha_thresh=0.1):
+def play_to_significance(bot_names,width=10,alpha_thresh=0.1):
     """
     ______
     Input:
@@ -406,20 +413,24 @@ def play_to_significance(bots,width=10,alpha_thresh=0.1):
         makes the bots play until each of their score values has
         a significance value of alpha or lower
     """    
-
+    bots = bot_names.copy()
     below_alpha,above_alpha = [],bots
     
     while len(above_alpha)>=4:
         mean,alpha = diagnostics.score_estim(width,(above_bot := above_alpha[0]).name)
-        if alpha < alpha_thresh:
+        if alpha < alpha_thresh and alpha != 0:
             below_alpha.append(above_alpha.pop(0))
         else:
-            print( f"{above_alpha[0].name}'s score estimate of {np.round(mean,2)} has a {np.round(alpha*100,2)}% chance of being off by more than {width}")
+            if alpha == 0:
+                print( f"{above_alpha[0].name}'s score cannot be estimated because it has not played yet.")
+                alpha = 0.5
+            else:    
+                print( f"{above_alpha[0].name}'s score estimate of {np.round(mean,2)} has a {np.round(alpha*100,2)}% chance of being off by more than {width}")
             above_alpha_copy = above_alpha.copy()
             above_alpha_copy.remove(above_bot)
             #let them play some games
-            for game_idx in range(int(alpha*(10*width/alpha_thresh))):
-            #10 just so happens to be the constant that is approximately appropriate
+            for game_idx in range(int(np.ceil((alpha-alpha_thresh)*(10*(100/width)/alpha_thresh)))):
+            #this just so happens to be approximately appropriate
             #the closer the alpha is the fewer games the bot has to play to significance
             #this is a rough estimate and can be made more precise
                 random.shuffle(above_alpha_copy)
@@ -438,11 +449,12 @@ def play_to_significance(bots,width=10,alpha_thresh=0.1):
     
     
 
-def reproduce(bot_species):
+def reproduce(bots,bot_species):
     """
     ______
     Input:
-        one species of bots
+        bots --> a list of bot objects
+        bot_species --> a list of bot names
     ______
     Output:
         names of the new set of bots of the same size as the input set
@@ -456,16 +468,18 @@ def reproduce(bot_species):
     """
     new_generation = []
     species_size = len(bot_species)
-    bot_species.sort(key = lambda bot: bot.fitness,reverse = True)
-    bots = bot_species[:np.round(0.1*species_size)] #the worst 10% are eliminated
+    bots = [bot for bot in bots if bot.name in bot_species] #from name to object
+    bots.sort(key = lambda bot: bot.fitness,reverse = True)
+
+    bots = bots[:int(np.round(0.1*species_size))] #the worst 10% are eliminated
     
-    for _ in range(np.round(gen_size*0.25)): 
+    for _ in range(int(np.round(species_size*0.25))): 
         new_generation.append(bots[_])
 
     percentage = 0.375 
     for bot in bots:
         offspring_count = 0
-        while offspring_count/species_size <= percentage and np.round(percentage*gen_size) > 1:
+        while offspring_count/species_size <= percentage and int(np.round(percentage*species_size)) > 1:
             if (offspring_genome := produce_offspring(bot,random.choice(bots))):
                 utils.save_init_genome(offspring_name, produce_offspring(bot,random.choice(bots)))
                 new_generation.append(offspring_name)
@@ -473,13 +487,15 @@ def reproduce(bot_species):
     
     return new_generation
 
-def generation(bots,species,significance_val):#mutation parameters!!
+def generation(gen_idx,species_representatives,significance_width,significance_val,link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh=0.8,rand_weight_thresh=0.1,pert_rate=0.1):
     """
     ______
     Input:
-        old generation:
-        previous_species ( last generations species )
-        
+        gen_idx
+        species_representatives
+        significance_width
+        significance_val
+        all mutation parameters
     ______
     Output:
         the species representatives of the new generation
@@ -493,26 +509,27 @@ def generation(bots,species,significance_val):#mutation parameters!!
     """
     
     bots = [Player(bot_name) for bot_name in utils.load_bot_names()]
-    play_to_significance(bots,significance_val)
+    play_to_significance(bots,significance_width,significance_val)
+    
+    species = speciation(bots=bots,species = species_representatives)
+    utils.save_generation_species(gen_idx,species)#save species under gen idx
     fitness(bots = bots,species = species)
         
     for representative,species_item in species.items():
-        species[representative] = reproduce(species_item)
+        species[representative] = [bot.name for bot in reproduce(bots,species_item)] #from object to name
         for bot in species[representative]:
-            mutation_step(bot)#parameters
-            
-    
-    species_representatives = species_represent(species)
-    new_species = speciation(bots=bots,species = species_representatives)    
-    
-    return new_species
+            mutation_step(bot,link_thresh,node_thresh,weights_mut_thresh,rand_weight_thresh,pert_rate)#parameters
+
+    next_species_representatives = species_represent(new_species)
+    return species_representatives
 
 
 if __name__ == "__main__": #so it doesnt run when imported
     print("Magic Man")
-    #play_to_significance()
-
-    
+    generation(0,species_representatives=species_represent(),
+               significance_width=10,significance_val=0.1,
+               link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh=0.8,rand_weight_thresh=0.1,pert_rate=0.1)
+  
     
 """
 The profiler estimates a game to take ~6.7 sec

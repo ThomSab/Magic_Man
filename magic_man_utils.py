@@ -116,8 +116,41 @@ def save_init_innovation(nn_type,init_innovation,directory=cwd):
     except Exception as exception:
         print("Saving the initial innovation number failed: {}".format(exception))
 
+def save_generation_species(gen_idx,species,directory=cwd):
+
+    if gen_idx == 0: #initial species
+        with open(directory + r'\Bots\species.json','w') as species_file:
+            try:
+                json.dump({str(gen_idx):species})
+            except Exception as exception:
+                print("Saving initial species representatives failed: {}, \n Species: {}".format(exception,species))
+        return
+
+    try:
+        with open(directory + r'\Bots\species.json','r')as species_file: #open mode 'r' read 
+            species_obj = json.load(score_file)  
+            species_file.close()
+            
+        if not str(gen_idx) in species_obj:    
+            species_obj[str(gen_idx)] = species
+        else:
+            print(f"Generation Index Conflict: The Species {gen_idx} already exists!")
+            return
+        
+        with open(directory + r'\Bots\species.json','w') as species_file:
+            json.dump(species_repr)
+            print(f"Species {gen_idx} saved")
+            
+    except Exception as exception:
+        print("Saving species failed: {}".format(bot_name,exception))            
+    
 
 
+def load_generation_species(directory = cwd):
+    with open(directory + r'\Bots\species_repr.json','r') as species_file:
+        return json.load(species_file)
+        
+        
 def save_bot_genome(bot_name,genome,directory=cwd):
     with open(directory + r'\Bots\{}\genome.json'.format(bot_name),'w') as genome_file:
         try:
@@ -129,16 +162,18 @@ def load_bot_genome(bot_name,directory=cwd):
     with open(directory + r'\Bots\{}\genome.json'.format(bot_name),'r') as genome_file:
         return json.load(genome_file)
 
-
 def load_bot_score(bot_name,directory=cwd):
     with open(directory + r'\Bots\{}\score.json'.format(bot_name),'r') as score_file:
         return json.load(score_file)["SCORE"]
-
+        
 def load_bot_names(directory=cwd):
     bot_dir = os.listdir(cwd +'\Bots')
-    return [bot_name for bot_name in bot_dir if bot_name not in ['bid_innovation.json','play_innovation.json','stm_innovation.json']]
+    return [bot_name for bot_name in bot_dir if bot_name not in ['bid_innovation.json','play_innovation.json','stm_innovation.json','species.json']]
 
-
+def load_empty_bot_names(directory=cwd):
+    with open(directory + r'\names.json','r') as score_file:
+        return json.load(score_file)["NAMES"]
+    
 def load_innovation_number(nn_type,directory=cwd):
     #nn_type can be ['play','bid','stm']
     return json.load(open(directory + r'\Bots\{}_innovation.json'.format(nn_type),'r'))
@@ -342,15 +377,12 @@ def check_for_connection_duplication(bot_connection_genome,connection_gene):
         A Gene for a single connection for the bot
     ______
     Output:
-        Rrue if the connection is already in the net
+        A list of the duplicate connection genes if the connection is already in the net
         False if the connection is new
     """
     if (dubs := [gene for gene in bot_connection_genome if (gene["IN"] == connection_gene["IN"] and gene["OUT"] == connection_gene["OUT"])]):
         return dubs
     return False
     
-    
-    
-
     
     
