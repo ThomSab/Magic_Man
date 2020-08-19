@@ -471,7 +471,7 @@ def reproduce(bots,bot_species):
     bots = [bot for bot in bots if bot.name in bot_species] #from name to object
     bots.sort(key = lambda bot: bot.fitness,reverse = True)
 
-    bots = bots[:int(np.round(0.1*species_size))] #the worst 10% are eliminated
+    bots = bots[:int(np.round(0.9*species_size))] #the worst 10% are eliminated
     
     for _ in range(int(np.round(species_size*0.25))): 
         new_generation.append(bots[_])
@@ -526,9 +526,9 @@ def generation(gen_idx,species_representatives,significance_width,significance_v
 
 if __name__ == "__main__": #so it doesnt run when imported
     print("Magic Man")
-    generation(0,species_representatives=species_represent(),
-               significance_width=10,significance_val=0.1,
-               link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh=0.8,rand_weight_thresh=0.1,pert_rate=0.1)
+    #generation(0,species_representatives=species_represent(),
+    #           significance_width=10,significance_val=0.1,
+    #           link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh=0.8,rand_weight_thresh=0.1,pert_rate=0.1)
   
     
 """

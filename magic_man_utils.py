@@ -121,7 +121,7 @@ def save_generation_species(gen_idx,species,directory=cwd):
     if gen_idx == 0: #initial species
         with open(directory + r'\Bots\species.json','w') as species_file:
             try:
-                json.dump({str(gen_idx):species})
+                json.dump({str(gen_idx):species},species_file)
             except Exception as exception:
                 print("Saving initial species representatives failed: {}, \n Species: {}".format(exception,species))
         return
@@ -146,9 +146,10 @@ def save_generation_species(gen_idx,species,directory=cwd):
     
 
 
-def load_generation_species(directory = cwd):
+def load_generation_species(gen_idx,directory = cwd):
     with open(directory + r'\Bots\species_repr.json','r') as species_file:
-        return json.load(species_file)
+        species_obj = json.load(species_file)
+        return species_obj[str(gen_idx)]
         
         
 def save_bot_genome(bot_name,genome,directory=cwd):
@@ -171,8 +172,8 @@ def load_bot_names(directory=cwd):
     return [bot_name for bot_name in bot_dir if bot_name not in ['bid_innovation.json','play_innovation.json','stm_innovation.json','species.json']]
 
 def load_empty_bot_names(directory=cwd):
-    with open(directory + r'\names.json','r') as score_file:
-        return json.load(score_file)["NAMES"]
+    with open(directory + r'\names.json','r') as name_file:
+        return json.load(name_file)["NAMES"]
     
 def load_innovation_number(nn_type,directory=cwd):
     #nn_type can be ['play','bid','stm']
