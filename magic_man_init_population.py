@@ -1,6 +1,8 @@
 import os
 import json
 import magic_man_utils as utils
+from magic_train import species_represent,speciation,mutation_step
+from magic_man_player import Player
 
 N_bid_sensors,N_bid_outputs,N_play_sensors,N_play_outputs,N_stm_sensors,N_stm_outputs = utils.init_list
 
@@ -64,9 +66,14 @@ if __name__ == "__main__":
         utils.save_init_score(player,0)
     for net_type,net_iin in [('bid',bid_iin),('play',play_iin),('stm',stm_iin)]:
         utils.save_init_innovation(net_type,net_iin)
+    utils.save_init_progress()
+    bots = [Player(bot_name) for bot_name in utils.load_bot_names()]
+    
+    for bot in bots:
+        mutation_step(bot.name)
+    # init mutation step st. the first generation isnt pointless
         
-
-
+    utils.save_generation_species(0,speciation(bots,species=species_represent()))
 
 
 

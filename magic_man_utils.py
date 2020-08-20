@@ -91,7 +91,16 @@ def save_init_score (bot_name,init_score,directory=cwd):
         return
     except Exception as exception:
         print("Saving the initial score failed: {}".format(exception))
-        
+
+
+def save_init_progress(directory=cwd):
+    try:
+        with open(directory + r'\Bots\progress.json','x')as progress_file: #open mode 'x' creates a file and fails if it already exists
+            json.dump({"PROGRESS":[{"GEN":0,"MAX":0,"AVG":0}]},progress_file)#initial progress is saved as the first entry of a list
+        return
+    except Exception as exception:
+        print("Saving the initial progress failed: {}".format(exception))
+
 
 def save_init_innovation(nn_type,init_innovation,directory=cwd):
     """
@@ -147,13 +156,23 @@ def save_generation_species(gen_idx,species,directory=cwd):
     except Exception as exception:
         print("Saving species failed: {}".format(exception))            
     
-
-
-def load_generation_species(gen_idx,directory = cwd):
-    with open(directory + r'\Bots\species_repr.json','r') as species_file:
-        species_obj = json.load(species_file)
-        return species_obj[str(gen_idx)]
+def save_progress(gen_idx,max_score,avg_score,directory=cwd):
+    try:
+        with open(directory + r'\Bots\progress.json','r')as progress_file: #open mode 'r' read 
+            progress_obj = json.load(progress_file) 
+            progress_file.close()
+            
+           
+        species_obj["PROGRESS"].append({"GEN":gen_idx,"MAX":max_score,"AVG":avg_score})
         
+        with open(directory + r'\Bots\progress.json','w') as progress_file:
+            json.dump(progress_obj)
+            print(f"Progress of Generation {gen_idx} saved")
+            
+    except Exception as exception:
+        print("Saving progress failed: {}".format(exception))     
+
+       
         
 def save_bot_genome(bot_name,genome,directory=cwd):
     with open(directory + r'\Bots\{}\genome.json'.format(bot_name),'w') as genome_file:
@@ -161,6 +180,11 @@ def save_bot_genome(bot_name,genome,directory=cwd):
             json.dump(genome,genome_file)
         except Exception as exception:
             print("Saving {} genome failed: {}".format(bot_name,exception))
+
+def load_gen_species(gen_idx,directory = cwd):
+    with open(directory + r'\Bots\species.json','r') as species_file:
+        species_obj = json.load(species_file)
+        return species_obj[str(gen_idx)]
 
 def load_bot_genome(bot_name,directory=cwd):
     try:
@@ -175,7 +199,7 @@ def load_bot_score(bot_name,directory=cwd):
         
 def load_bot_names(directory=cwd):
     bot_dir = os.listdir(cwd +'\Bots')
-    return [bot_name for bot_name in bot_dir if bot_name not in ['bid_innovation.json','play_innovation.json','stm_innovation.json','species.json']]
+    return [bot_name for bot_name in bot_dir if bot_name not in ['bid_innovation.json','play_innovation.json','stm_innovation.json','species.json','progress.json']]
 
 def load_empty_bot_names(gen_idx,directory=cwd):
     with open(directory + r'\names.json','r') as name_file:
@@ -406,7 +430,7 @@ def incinerate(bot_name,directory=cwd):
     """   
     
     try:
-        shutil.rmtree(directory + f'\Bots\{botname}')
+        shutil.rmtree(directory + f'\Bots\{bot_name}')
     except Exception as exception:
         print(f"Incinerating {bot_name} failed: {exception}") 
         return False

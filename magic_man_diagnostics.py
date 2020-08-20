@@ -92,12 +92,22 @@ def bot_scores(width):
     return score_tuples
  
 
-def maximum_score(width):
+def gen_maximum_score(width,alpha):
     score_tuples = bot_scores(width)
+    if [tuple[1] for tuple in score_tuples if tuple[1] > alpha]:
+        print(f"Not all Scores are significant to alpha = {alpha}, maximum Score is unknown.")
+        return False
+
     score_tuples.sort(key = lambda score_tuple: score_tuple[0],reverse = True)
-    return score_tuples[0]
+    return score_tuples[0][0]
     
+def gen_avg_score(width,alpha):
+    score_tuples = bot_scores(width)
+    if [tuple[1] for tuple in score_tuples if tuple[1] > alpha]:
+        print(f"Not all Scores are significant to alpha = {alpha}, maximum Score is unknown.")
+        return False    
     
+    return sum([tuple[0] for tuple in score_tuples])/len(score_tuples)
     
 def graph(bot_name,net_type):
     """

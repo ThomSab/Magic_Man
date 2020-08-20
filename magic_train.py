@@ -489,9 +489,9 @@ def reproduce(bots,bot_species,names):
         bot_offspring_count = 0
         while bot_offspring_count/species_size <= percentage and int(np.round(percentage*species_size)) > 1:
             if (offspring_genome := produce_offspring(bot,random.choice(bots))):
-                utils.save_init_genome(names[species_offspring_count+bot_offspring_count], produce_offspring(bot,random.choice(bots)))
-                new_generation.append(names[species_offspring_count+bot_offspring_count])
-                print(f"Generated new Bot {names[species_offspring_count+bot_offspring_count]}")
+                utils.save_init_genome(offspring_name:=names[species_offspring_count+bot_offspring_count], produce_offspring(bot,random.choice(bots)))
+                utils.save_init_score(offspring_name,0)
+                new_generation.append(offspring_name)
                 bot_offspring_count+=1
         species_offspring_count+=bot_offspring_count
         percentage /= 2
@@ -500,7 +500,7 @@ def reproduce(bots,bot_species,names):
     
     return new_generation
 
-def generation(gen_idx,species_representatives,significance_width,significance_val,link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh=0.8,rand_weight_thresh=0.1,pert_rate=0.1):
+def generation(gen_idx,significance_width,significance_val,link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh=0.8,rand_weight_thresh=0.1,pert_rate=0.1):
     """
     ______
     Input:
@@ -522,19 +522,16 @@ def generation(gen_idx,species_representatives,significance_width,significance_v
         first generation idx should be one bc the initial species is 0
         
     """
-    
+
     bots = [Player(bot_name) for bot_name in utils.load_bot_names()]
-    play_to_significance(bots,significance_width,significance_val)
-    
-    species = speciation(bots=bots,species = species_representatives)
-    utils.save_generation_species(gen_idx,species)#save species under gen idx
-    fitness(bots = bots,species = species)
-      
+    play_to_significance(bots,significance_width,significance_val) #verify significance
+
+    fitness(bots = bots,species = utils.load_gen_species(gen_idx-1))
     names = utils.load_empty_bot_names(gen_idx)
       
     name_idx = 0      
     for representative,species_item in species.items():
-        species[representative] = [bot.name for bot in reproduce(bots,species_item,names[name_idx:len(species_item)])] #from object to name
+        species[representative] = [bot_name for bot_name in reproduce(bots,species_item,names[name_idx:len(species_item)])] #from object to name
         name_idx+=len(species_item)
         for bot in species[representative]:
             mutation_step(bot,link_thresh,node_thresh,weights_mut_thresh,rand_weight_thresh,pert_rate)#parameters
@@ -542,20 +539,26 @@ def generation(gen_idx,species_representatives,significance_width,significance_v
     for bot in bots:
         utils.incinerate(bot.name) #delete the old generation
 
-    next_species_representatives = species_represent(species)
-    return nex_species_representatives
+    bots = [Player(bot_name) for bot_name in utils.load_bot_names()] #load the new generation
+    
+    new_species_representatives = species_represent(species)
+    play_to_significance(bots,significance_width,significance_val)
+    species = speciation(bots=bots,species = new_species_representatives)
+    
+    utils.save_generation_species(gen_idx,species)#save species under gen idx
+
+    return
 
 
 if __name__ == "__main__": #so it doesnt run when imported
     print(txt)
 
-    #bots = [Player(bot_name) for bot_name in utils.load_bot_names()]
-    #for bot in bots:
-    #    mutation_step(bot.name)
+    bots = [Player(bot_name) for bot_name in utils.load_bot_names()]
+
     
-    generation(1,species_representatives=species_represent(),
-               significance_width=20,significance_val=0.2,
-               link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh=0.8,rand_weight_thresh=0.1,pert_rate=0.1)
+    #generation(1,species_representatives=species_represent(),
+    #           significance_width=20,significance_val=0.2,
+    #           link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh=0.8,rand_weight_thresh=0.1,pert_rate=0.1)
   
     
 """
