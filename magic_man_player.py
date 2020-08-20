@@ -60,8 +60,7 @@ class Player:
         self.sigmoid = sigmoid_function
         
         if os.path.exists(base_path+'\Bots\{}'.format(self.name)):
-            with open(base_path+'\Bots\{}\genome.json'.format(name)) as genome_file:
-                genome = json.load(genome_file)
+            genome = utils.load_bot_genome(self.name)
                 
             bid_node_genome, bid_connection_genome  = genome["bid_node_genome"], genome["bid_connection_genome"]
             play_node_genome,play_connection_genome = genome["play_node_genome"],genome["play_connection_genome"]

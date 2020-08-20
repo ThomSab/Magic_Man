@@ -51,3 +51,8 @@ New features need to be introduced: Mating, Speciation and Topologic Evolution.
 __________________________________________________________________________________________________
 [NEW] Diagnostics
 Implement a non-hacky function to monitor what is going on inside the algorithm.
+
+__________________________________________________________________________________________________
+[CHANGE] Information Sets
+Is the information set that the bot recieves in the game sufficient.
+-->Should be reviewed

@@ -5,6 +5,7 @@ import json
 import numpy as np
 from scipy.special import expit
 import os
+import shutil
 
 
 
@@ -62,6 +63,8 @@ def save_init_genome(bot_name,init_genome,directory=cwd):
     try:
         with open(directory + r'\Bots\{}\genome.json'.format(bot_name),'x')as genome_file: #open mode 'x' creates a file and fails if it already exists
             json.dump(init_genome,genome_file)#initial score is saved as the first entry of a list
+            print(f"Generated new Bot: {bot_name}")
+
         return
         
     except Exception as exception:
@@ -118,7 +121,7 @@ def save_init_innovation(nn_type,init_innovation,directory=cwd):
 
 def save_generation_species(gen_idx,species,directory=cwd):
 
-    if gen_idx == 0: #initial species
+    if not os.path.exists(directory + r'\Bots\species.json'): #initial species
         with open(directory + r'\Bots\species.json','w') as species_file:
             try:
                 json.dump({str(gen_idx):species},species_file)
@@ -128,7 +131,7 @@ def save_generation_species(gen_idx,species,directory=cwd):
 
     try:
         with open(directory + r'\Bots\species.json','r')as species_file: #open mode 'r' read 
-            species_obj = json.load(score_file)  
+            species_obj = json.load(species_file)  
             species_file.close()
             
         if not str(gen_idx) in species_obj:    
@@ -142,7 +145,7 @@ def save_generation_species(gen_idx,species,directory=cwd):
             print(f"Species {gen_idx} saved")
             
     except Exception as exception:
-        print("Saving species failed: {}".format(bot_name,exception))            
+        print("Saving species failed: {}".format(exception))            
     
 
 
@@ -160,8 +163,11 @@ def save_bot_genome(bot_name,genome,directory=cwd):
             print("Saving {} genome failed: {}".format(bot_name,exception))
 
 def load_bot_genome(bot_name,directory=cwd):
-    with open(directory + r'\Bots\{}\genome.json'.format(bot_name),'r') as genome_file:
-        return json.load(genome_file)
+    try:
+        with open(directory + r'\Bots\{}\genome.json'.format(bot_name),'r') as genome_file:
+            return json.load(genome_file)
+    except Exception as exception:
+        print(f"Loading {bot_name} Genome Failed: {exception}")
 
 def load_bot_score(bot_name,directory=cwd):
     with open(directory + r'\Bots\{}\score.json'.format(bot_name),'r') as score_file:
@@ -171,9 +177,9 @@ def load_bot_names(directory=cwd):
     bot_dir = os.listdir(cwd +'\Bots')
     return [bot_name for bot_name in bot_dir if bot_name not in ['bid_innovation.json','play_innovation.json','stm_innovation.json','species.json']]
 
-def load_empty_bot_names(directory=cwd):
+def load_empty_bot_names(gen_idx,directory=cwd):
     with open(directory + r'\names.json','r') as name_file:
-        return json.load(name_file)["NAMES"]
+        return json.load(name_file)[str(gen_idx)]
     
 def load_innovation_number(nn_type,directory=cwd):
     #nn_type can be ['play','bid','stm']
@@ -386,4 +392,30 @@ def check_for_connection_duplication(bot_connection_genome,connection_gene):
     return False
     
     
+def incinerate(bot_name,directory=cwd):
+    """
+    ______
+    Input:
+        A bots Name
+    ______
+    Output:
+        True or False depending on incineration success
+    ______
+        Deletes a bot and all his files
+        Genome and Score
+    """   
+    
+    try:
+        shutil.rmtree(directory + f'\Bots\{botname}')
+    except Exception as exception:
+        print(f"Incinerating {bot_name} failed: {exception}") 
+        return False
+    return True
+        
+        
+        
+        
+        
+        
+        
     

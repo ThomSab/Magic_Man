@@ -422,7 +422,7 @@ def play_to_significance(bot_names,width=10,alpha_thresh=0.1):
             below_alpha.append(above_alpha.pop(0))
         else:
             if alpha == 0:
-                print( f"{above_alpha[0].name}'s score cannot be estimated because it has not played yet.")
+                print( f"{above_alpha[0].name}'s score cannot be estimated because he/she has not played yet.")
                 alpha = 0.5
             else:    
                 print( f"{above_alpha[0].name}'s score estimate of {np.round(mean,2)} has a {np.round(alpha*100,2)}% chance of being off by more than {width}")
@@ -449,7 +449,7 @@ def play_to_significance(bot_names,width=10,alpha_thresh=0.1):
     
     
 
-def reproduce(bots,bot_species):
+def reproduce(bots,bot_species,names):
     """
     ______
     Input:
@@ -467,7 +467,7 @@ def reproduce(bots,bot_species):
         the Second produces another 18.75%, third produces 9.375% etc.
     """
     new_generation = []
-    species_size = len(bot_species)
+    species_size = len(names)
     bots = [bot for bot in bots if bot.name in bot_species] #from name to object
     bots.sort(key = lambda bot: bot.fitness,reverse = True)
 
@@ -476,14 +476,27 @@ def reproduce(bots,bot_species):
     for _ in range(int(np.round(species_size*0.25))): 
         new_generation.append(bots[_])
 
-    percentage = 0.375 
+
+    """
+    This whole bot_count aspect of the reproduction method
+    should be gotten rid of
+    but I have not the patience for that rn
+    """
+
+    percentage = 0.375
+    species_offspring_count = 0
     for bot in bots:
-        offspring_count = 0
-        while offspring_count/species_size <= percentage and int(np.round(percentage*species_size)) > 1:
+        bot_offspring_count = 0
+        while bot_offspring_count/species_size <= percentage and int(np.round(percentage*species_size)) > 1:
             if (offspring_genome := produce_offspring(bot,random.choice(bots))):
-                utils.save_init_genome(offspring_name, produce_offspring(bot,random.choice(bots)))
-                new_generation.append(offspring_name)
-    percentage /= 2
+                utils.save_init_genome(names[species_offspring_count+bot_offspring_count], produce_offspring(bot,random.choice(bots)))
+                new_generation.append(names[species_offspring_count+bot_offspring_count])
+                print(f"Generated new Bot {names[species_offspring_count+bot_offspring_count]}")
+                bot_offspring_count+=1
+        species_offspring_count+=bot_offspring_count
+        percentage /= 2
+
+    #check if the species is as large as it was before
     
     return new_generation
 
@@ -505,6 +518,8 @@ def generation(gen_idx,species_representatives,significance_width,significance_v
         Basically main: All functions are called st.:
         The Members of the current species train until their scores are significant
         The fittest members then reproduce and mutate
+
+        first generation idx should be one bc the initial species is 0
         
     """
     
@@ -514,26 +529,38 @@ def generation(gen_idx,species_representatives,significance_width,significance_v
     species = speciation(bots=bots,species = species_representatives)
     utils.save_generation_species(gen_idx,species)#save species under gen idx
     fitness(bots = bots,species = species)
-        
+      
+    names = utils.load_empty_bot_names(gen_idx)
+      
+    name_idx = 0      
     for representative,species_item in species.items():
-        species[representative] = [bot.name for bot in reproduce(bots,species_item)] #from object to name
+        species[representative] = [bot.name for bot in reproduce(bots,species_item,names[name_idx:len(species_item)])] #from object to name
+        name_idx+=len(species_item)
         for bot in species[representative]:
             mutation_step(bot,link_thresh,node_thresh,weights_mut_thresh,rand_weight_thresh,pert_rate)#parameters
 
-    next_species_representatives = species_represent(new_species)
-    return species_representatives
+    for bot in bots:
+        utils.incinerate(bot.name) #delete the old generation
+
+    next_species_representatives = species_represent(species)
+    return nex_species_representatives
 
 
 if __name__ == "__main__": #so it doesnt run when imported
-    print("Magic Man")
-    #generation(0,species_representatives=species_represent(),
-    #           significance_width=10,significance_val=0.1,
-    #           link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh=0.8,rand_weight_thresh=0.1,pert_rate=0.1)
+    print(txt)
+
+    #bots = [Player(bot_name) for bot_name in utils.load_bot_names()]
+    #for bot in bots:
+    #    mutation_step(bot.name)
+    
+    generation(1,species_representatives=species_represent(),
+               significance_width=20,significance_val=0.2,
+               link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh=0.8,rand_weight_thresh=0.1,pert_rate=0.1)
   
     
 """
 The profiler estimates a game to take ~6.7 sec
 Back-of-the-envelope estimation:
-6.7 seconds * ~2500 games to significance * 150 specimen / 4 scores per game * ~200 generations = 
-125625000 seconds or about 4 years
+6.7 seconds * ~1000 games to significance * 150 specimen / 4 scores per game * ~200 generations = 
+125625000 seconds or about 1.6 years
 """
