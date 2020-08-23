@@ -63,7 +63,7 @@ def play_game(game_pool):
 
 
 
-def species_represent(species_last_gen=None):
+def species_represent(last_gen_species=None):
     """
     ______
     Input:
@@ -71,26 +71,29 @@ def species_represent(species_last_gen=None):
         or no input
     ______
     Output:
-        New Species representatives
+        Old Species with new representatives and no members (except for the new representative)
         or one single representative for the initial generation
     """
 
-    species_current_gen = {}
+    
 
-    if species_last_gen != None:      
-        for init_representative,species in species_last_gen.items():
-            new_representative_name = random.choice(species)
-            species_current_gen[init_representative] = [new_representative_name]
-            return species_current_gen
+    if last_gen_species != None:
+        current_gen_species = last_gen_species.copy()
+        for last_gen_species_idx,species in last_gen_species.items():#the species index remains the same but the representative is changed
+            new_representative_name = random.choice(species["MEMBERS"])
+            current_gen_species[last_gen_species_idx]["REPRESENTATIVE"] = new_representative_name
+            current_gen_species[last_gen_species_idx]["MEMBERS"]        = [new_representative_name]
+            return current_gen_species
     else:
-        print("First Generation, no seperate Species...\n")
+        print("No seperate Species declared...\n")
+        current_gen_species = {}
         representative_name = random.choice(utils.load_bot_names())
-        species_current_gen[representative_name] = [representative_name]
-        return species_current_gen
+        current_gen_species["0"]={"REPRESENTATIVE":representative_name,"MEMBERS":[representative_name]} #first species
+        return current_gen_species
 
 
 
-def speciation (bots,c1=1,c2=1,c3=0.4,compat_thresh=3,species = {}):
+def speciation (bots,c1=1,c2=1,c3=0.4,compat_thresh=3,species_dict = {}):
     """
     ______
     Input:
@@ -101,7 +104,7 @@ def speciation (bots,c1=1,c2=1,c3=0.4,compat_thresh=3,species = {}):
     Output:
         Assigns each specimen in the population to a species
         returns a dictionary for the speciation
-        { representative.name : [ all members of the species], ... }
+        { representative.name : [ all members of the species],  UPDATE THIS COMMENTARY
     ______
         The original set of species is determined by the last generation
         So for each species in the last generation one representative is selected randomly
@@ -109,18 +112,18 @@ def speciation (bots,c1=1,c2=1,c3=0.4,compat_thresh=3,species = {}):
         For the first generation the species dictionary is empty
         and there is only one species as all bots are equal
     """
-    assert type(species)==dict,"Representative Genome was not passed as a dictionary but as {}".format(type(represent))
-    assert species
+    assert type(species_dict)==dict,"Representative Genome was not passed as a dictionary but as {}".format(type(represent))
+    assert species_dict
 
     print("Speciation")
     for bot in bots:
-        if utils.compatibility_search(bot,c1,c2,c3,compat_thresh,species):#comp_search assigns the species to the bot but not the bot to the species dict
-            species[bot.species].append(bot.name)# from object to name
+        if utils.compatibility_search(bot,c1,c2,c3,compat_thresh,species_dict):#comp_search assigns the species to the bot but not the bot to the species dict
+            species_dict[bot.species]["MEMBERS"].append(bot.name)# from object to name
         else:
-            bot.species = bot.name
-            species[bot.name] = [bot.name] #new representative
+            bot.species = str(len(species_dict+1))
+            species_dict[str(len(species_dict+1))] = {"REPRESENTATIVE":bot.name,"MEMBERS":[bot.name]} #new representative
 
-    return species
+    return species_dict
    
    
    
@@ -139,7 +142,7 @@ def fitness (bots,species = {}):
     for bot in bots:
         bot_score,alpha = diagnostics.score_estim(2,bot.name) #2 is the width of the confidence band around the estim
         assert alpha < 0.5, "The score estimate for {} is insignificant at a level of {}".format(bot.name,alpha) #check whether the estimate is reliable
-        bot.fitness = bot_score / len(species[bot.species]) #fitness fn as defined in the paper 
+        bot.fitness = bot_score / len(species[bot.species]["MEMBERS"]) #fitness fn as defined in the paper 
 
 
 
@@ -184,7 +187,7 @@ def mutate_link(nn_node_genome,nn_connection_genome,net_type):
 
     elif (duplication := utils.check_for_connection_duplication(nn_connection_genome,link_mutation)):
         for gene in duplication:
-            print(f"Connection already exists at innovation {gene['INNOVATION']}")
+            print(f"Connection {link_mutation['IN']} --> {link_mutation['OUT']} not added to genome. Connection already exists at innovation {gene['INNOVATION']}")
             return nn_connection_genome,None
     
     nn_connection_genome.append(link_mutation)
@@ -309,8 +312,10 @@ def produce_net_connection_offspring(fit_connection_genome,flop_connection_genom
         offspring neural net connection genome
 
     """
-    flop_excess_connections = [gene for gene in flop_connection_genome if gene not in fit_connection_genome]
+    fit_innovations = [gene["INNOVATION"] for gene in fit_connection_genome]
+    flop_excess_connections = [gene for gene in flop_connection_genome if gene["INNOVATION"] not in fit_innovations]
     #sets are three times as fast as list comprehensions but dictionarys are unhasheable
+    #also the connection genes need to be matched by innovation bc. they might differ in weight
     offspring_connection_genome = fit_connection_genome + flop_excess_connections
     offspring_connection_genome.sort(key = lambda x : x["INNOVATION"])
 
@@ -331,8 +336,10 @@ def produce_net_node_offspring(fit_node_genome,flop_node_genome):
     Output:
         offspring neural net node genome
     """
-    flop_excess_nodes = [gene for gene in flop_node_genome if gene not in fit_node_genome]
+    fit_idx =[gene["INDEX"] for gene in fit_node_genome]
+    flop_excess_nodes = [gene for gene in flop_node_genome if gene["INDEX"] not in fit_idx]
     #sets are three times as fast as list comprehensions but dictionarys are unhasheable
+    #also the node genes need to be matched by innovation bc. they might differ in active/inactive
     offspring_node_genome = fit_node_genome + flop_excess_nodes
     offspring_node_genome.sort(key = lambda x : x["INDEX"])
    
@@ -474,7 +481,7 @@ def reproduce(bots,bot_species,names):
     bots = bots[:int(np.round(0.9*species_size))] #the worst 10% are eliminated
     
     for _ in range(int(np.round(species_size*0.25))): 
-        new_generation.append(bots[_])
+        new_generation.append(bots[_].name)
 
 
     """
@@ -496,9 +503,17 @@ def reproduce(bots,bot_species,names):
         species_offspring_count+=bot_offspring_count
         percentage /= 2
 
-    #check if the species is as large as it was before
+
+    new_generation=new_generation[:species_size]#st the species does not get larger than anticipated
+    print(f"New Species Size is {len(new_generation)}")
+    
+    
+    for bot in [bot for bot in bots if bot.name not in new_generation]:
+            utils.incinerate(bot.name) #delete the rest of the old generation
     
     return new_generation
+
+
 
 def generation(gen_idx,significance_width,significance_val,link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh=0.8,rand_weight_thresh=0.1,pert_rate=0.1):
     """
@@ -524,46 +539,55 @@ def generation(gen_idx,significance_width,significance_val,link_thresh=0.05,node
     """
 
     bots = [Player(bot_name) for bot_name in utils.load_bot_names()]
+    
     play_to_significance(bots,significance_width,significance_val) #verify significance
+    gen_max_score,gen_avg_score = diagnostics.gen_max_score(significance_width,significance_val),diagnostics.gen_avg_score(significance_width,significance_val)
+    utils.save_progress(gen_idx-1,gen_max_score,gen_avg_score)#log process in case it wasnt last generation
+    
 
-    fitness(bots = bots,species = utils.load_gen_species(gen_idx-1))
+    species_dict = utils.load_gen_species(gen_idx-1,assign_species = True, bots = bots)
+    fitness(bots = bots,species = species_dict)
     names = utils.load_empty_bot_names(gen_idx)
       
     name_idx = 0      
-    for representative,species_item in species.items():
-        species[representative] = [bot_name for bot_name in reproduce(bots,species_item,names[name_idx:len(species_item)])] #from object to name
-        name_idx+=len(species_item)
-        for bot in species[representative]:
+    for species_idx,species in species_dict.items():
+        species["MEMBERS"] = [bot_name for bot_name in reproduce(bots,species["MEMBERS"],names[name_idx:len(species["MEMBERS"])])] #from object to name
+        
+        name_idx+=len(species["MEMBERS"])
+        for bot in species["MEMBERS"]:
             mutation_step(bot,link_thresh,node_thresh,weights_mut_thresh,rand_weight_thresh,pert_rate)#parameters
 
-    for bot in bots:
-        utils.incinerate(bot.name) #delete the old generation
-
     bots = [Player(bot_name) for bot_name in utils.load_bot_names()] #load the new generation
-    
-    new_species_representatives = species_represent(species)
+
+    new_species_representatives = species_represent(species_dict)
+    new_species_dict = speciation(bots=bots,species_dict = new_species_representatives)
+    utils.save_generation_species(gen_idx,new_species_dict)#save species under gen idx
+
     play_to_significance(bots,significance_width,significance_val)
-    species = speciation(bots=bots,species = new_species_representatives)
+    gen_max_score,gen_avg_score = diagnostics.gen_max_score(significance_width,significance_val),diagnostics.gen_avg_score(significance_width,significance_val)
+    utils.save_progress(gen_idx,gen_max_score,gen_avg_score)
+
     
-    utils.save_generation_species(gen_idx,species)#save species under gen idx
+
 
     return
+
+
 
 
 if __name__ == "__main__": #so it doesnt run when imported
     print(txt)
 
-    bots = [Player(bot_name) for bot_name in utils.load_bot_names()]
+    #bots = [Player(bot_name) for bot_name in utils.load_bot_names()]
 
-    
-    #generation(1,species_representatives=species_represent(),
-    #           significance_width=20,significance_val=0.2,
-    #           link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh=0.8,rand_weight_thresh=0.1,pert_rate=0.1)
-  
-    
+    for gen in range(1,4):
+        generation(gen,
+                   significance_width=20,significance_val=0.4,
+                   link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh=0.8,rand_weight_thresh=0.1,pert_rate=0.1)
+
 """
 The profiler estimates a game to take ~6.7 sec
 Back-of-the-envelope estimation:
 6.7 seconds * ~1000 games to significance * 150 specimen / 4 scores per game * ~200 generations = 
-125625000 seconds or about 1.6 years
+about 1.6 years
 """

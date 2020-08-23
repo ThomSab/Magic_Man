@@ -128,12 +128,12 @@ def save_init_innovation(nn_type,init_innovation,directory=cwd):
     except Exception as exception:
         print("Saving the initial innovation number failed: {}".format(exception))
 
-def save_generation_species(gen_idx,species,directory=cwd):
+def save_generation_species(gen_idx,species_dict,directory=cwd):
 
     if not os.path.exists(directory + r'\Bots\species.json'): #initial species
         with open(directory + r'\Bots\species.json','w') as species_file:
             try:
-                json.dump({str(gen_idx):species},species_file)
+                json.dump({("GEN_"+str(gen_idx)):species_dict},species_file)
             except Exception as exception:
                 print("Saving initial species representatives failed: {}, \n Species: {}".format(exception,species))
         return
@@ -144,13 +144,13 @@ def save_generation_species(gen_idx,species,directory=cwd):
             species_file.close()
             
         if not str(gen_idx) in species_obj:    
-            species_obj[str(gen_idx)] = species
+            species_obj[("GEN_"+str(gen_idx))] = species_dict
         else:
             print(f"Generation Index Conflict: The Species {gen_idx} already exists!")
             return
         
         with open(directory + r'\Bots\species.json','w') as species_file:
-            json.dump(species_repr)
+            json.dump(species_obj,species_file)
             print(f"Species {gen_idx} saved")
             
     except Exception as exception:
@@ -159,14 +159,13 @@ def save_generation_species(gen_idx,species,directory=cwd):
 def save_progress(gen_idx,max_score,avg_score,directory=cwd):
     try:
         with open(directory + r'\Bots\progress.json','r')as progress_file: #open mode 'r' read 
-            progress_obj = json.load(progress_file) 
+            progress_obj = json.load(progress_file)["PROGRESS"]
             progress_file.close()
-            
-           
-        species_obj["PROGRESS"].append({"GEN":gen_idx,"MAX":max_score,"AVG":avg_score})
+                   
+        progress_obj.append({"GEN":gen_idx,"MAX":max_score,"AVG":avg_score})
         
         with open(directory + r'\Bots\progress.json','w') as progress_file:
-            json.dump(progress_obj)
+            json.dump(progress_obj,progress_file)
             print(f"Progress of Generation {gen_idx} saved")
             
     except Exception as exception:
@@ -181,10 +180,18 @@ def save_bot_genome(bot_name,genome,directory=cwd):
         except Exception as exception:
             print("Saving {} genome failed: {}".format(bot_name,exception))
 
-def load_gen_species(gen_idx,directory = cwd):
+def load_gen_species(gen_idx,assign_species=False,bots=None,directory = cwd):
     with open(directory + r'\Bots\species.json','r') as species_file:
         species_obj = json.load(species_file)
-        return species_obj[str(gen_idx)]
+        species_file.close()
+    
+    if assign_species==True:
+        assert bots , "No Bots were given to assign species to."
+        for species_idx,species in species_obj[("GEN_"+str(gen_idx))].items():
+            for bot in [bot for bot in bots if bot.name in species["MEMBERS"]]:
+                bot.species = species_idx
+    
+    return species_obj[("GEN_"+str(gen_idx))]
 
 def load_bot_genome(bot_name,directory=cwd):
     try:
@@ -204,7 +211,8 @@ def load_bot_names(directory=cwd):
 def load_empty_bot_names(gen_idx,directory=cwd):
     with open(directory + r'\names.json','r') as name_file:
         return json.load(name_file)[str(gen_idx)]
-    
+
+
 def load_innovation_number(nn_type,directory=cwd):
     #nn_type can be ['play','bid','stm']
     return json.load(open(directory + r'\Bots\{}_innovation.json'.format(nn_type),'r'))
@@ -270,7 +278,7 @@ def bot_compatibility_distance(genome_A,genome_B,c_1,c_2,c_3):
         
     """
     return  sum([nn_compatibility_distance(genome_A[nn_genome],genome_B[nn_genome],c_1,c_2,c_3) 
-            for nn_genome in ["bid_connection_genome","play_connection_genome","stm_connection_genome"]])
+                for nn_genome in ["bid_connection_genome","play_connection_genome","stm_connection_genome"]])
     
     
 
@@ -306,8 +314,7 @@ def nn_compatibility_distance(nn_genome_A,nn_genome_B,c_1,c_2,c_3):
     """
 
     weights_A,weights_B = np.array([gene["WEIGHT"] for gene in nng_A_matching]),np.array([gene["WEIGHT"] for gene in nng_B_matching])
-    
-    weight_diff = abs(weights_A-weights_B)         #all absolute differences in weight in matching genes 
+    weight_diff = abs(weights_A-weights_B)         #all absolute differences in weight in matching genes
     avg_wd_mg = np.mean(weight_diff)                #average weight difference of matching genes or W bar   
     N = max([len(nn_genome_A),len(nn_genome_B)])    #the amount of genes in the larger genome
     
@@ -348,7 +355,7 @@ def compatibility_mat(c1,c2,c3):
 
 
 
-def compatibility_search(bot,c1,c2,c3,compat_thresh,represent = {}):
+def compatibility_search(bot,c1,c2,c3,compat_thresh,species_dict = {}):
     """
     ______
     Input:
@@ -360,9 +367,9 @@ def compatibility_search(bot,c1,c2,c3,compat_thresh,represent = {}):
         Returns species that is compatible with the genome of the input bot
         Assigns the species to the bot
     """    
-    for representative in represent:
-        if bot_compatibility_distance(load_bot_genome(bot),load_bot_genome(representative),c1,c2,c3) < compat_thresh:
-            bot.species = representative
+    for species_idx,species in species_dict.items():
+        if bot_compatibility_distance(load_bot_genome(bot),load_bot_genome(species_dict[species_idx]["REPRESENTATIVE"]),c1,c2,c3) < compat_thresh:
+            bot.species = species_idx
             return bot.species
     return False
 
@@ -431,10 +438,11 @@ def incinerate(bot_name,directory=cwd):
     
     try:
         shutil.rmtree(directory + f'\Bots\{bot_name}')
+        print(f"Incinerated {bot_name}.")
     except Exception as exception:
         print(f"Incinerating {bot_name} failed: {exception}") 
         return False
-    return True
+
         
         
         

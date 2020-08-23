@@ -73,7 +73,7 @@ if __name__ == "__main__":
         mutation_step(bot.name)
     # init mutation step st. the first generation isnt pointless
         
-    utils.save_generation_species(0,speciation(bots,species=species_represent()))
+    utils.save_generation_species(0,speciation(bots,species_dict=species_represent()))
 
 
 
