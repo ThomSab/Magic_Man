@@ -3,20 +3,20 @@ and which new feature need to be introduced in order to implement NEAT.
 
 __________________________________________________________________________________________________
 __________________________________________________________________________________________________
-[CHANGE] Activation Function:
+[CHANGE] Activation Function: DONE
 Because of the way the new nets are generated the old activation function does not work anymore.
 The function needs to be modified appropriately.
 The challenge is not to find a function that works but a function that works efficiently.
 Obviously, the activation function will be called very often so optimization is crucial.
 
 __________________________________________________________________________________________________
-[CHANGE] Initial NN generation:
+[CHANGE] Initial NN generation: DONE
 For NEAT the neural nets start out minimal.
 I.e. every node on the input layer is connected to every node on the output layer.
 There are no hidden nodes at all. All hidden nodes are generated later through NEAT.
 
 __________________________________________________________________________________________________
-[NEW] Genomes:
+[NEW] Genomes: DONE
 Instead of saving the NNs as a matrix of connection weights and biases they are saved as two sets of Genomes.
 One for the nodes and one for the connection between them.
 Contained within the Genomes as well is the historical marking of each mutation.
@@ -43,16 +43,31 @@ When two bots mate, the respective genotypes for each net will be crossed over.
 (So that the playing net doesnt cross over with the bidding net.)
 
 __________________________________________________________________________________________________
-[NEW] Evolution Process
+[NEW] Evolution Process: DONE
 The Evolution Process will be changed entirely.
 While before, the champion of each generation was mutated randomly, the process is refined significantly.
 New features need to be introduced: Mating, Speciation and Topologic Evolution.
 
 __________________________________________________________________________________________________
-[NEW] Diagnostics
+[NEW] Diagnostics: NOT DONE
 Implement a non-hacky function to monitor what is going on inside the algorithm.
 
 __________________________________________________________________________________________________
-[CHANGE] Information Sets
+[CHANGE] Information Sets: NOT DONE
 Is the information set that the bot recieves in the game sufficient.
 -->Should be reviewed
+
+__________________________________________________________________________________________________
+[NEW] Neural Net Visualization: NOT DONE
+The visualization needs a method how to locate the nodes in the graph.
+-->Output nodes on one side Sensor nodes on the other etc.
+__________________________________________________________________________________________________
+[NEW] Species Size Allocation: NOT DONE
+When does a species grow and by how much? The fitness function is purposed for this bc. it protects small species.
+
+__________________________________________________________________________________________________
+[NEW] Species Size Allocation: NOT DONE
+When does a species grow and by how much? The fitness function is purposed for this bc. it protects small species.
+
+
+

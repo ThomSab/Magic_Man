@@ -145,6 +145,19 @@ def fitness (bots,species = {}):
         bot.fitness = bot_score / len(species[bot.species]["MEMBERS"]) #fitness fn as defined in the paper 
 
 
+def species_allocation(bots,species_dict):
+    """
+    ______
+    Input:
+        Bots with assigned fitness
+        species dictionary
+    ______
+    Output:
+        a dictionary that assigns species size to each 
+        species according to its performance
+    """
+    pass
+
 
 def mutate_link(nn_node_genome,nn_connection_genome,net_type):
     """
@@ -325,8 +338,6 @@ def produce_net_connection_offspring(fit_connection_genome,flop_connection_genom
     return offspring_connection_genome
 
 
-
-
 def produce_net_node_offspring(fit_node_genome,flop_node_genome):
     """
     ______
@@ -336,10 +347,13 @@ def produce_net_node_offspring(fit_node_genome,flop_node_genome):
     Output:
         offspring neural net node genome
     """
-    fit_idx =[gene["INDEX"] for gene in fit_node_genome]
-    flop_excess_nodes = [gene for gene in flop_node_genome if gene["INDEX"] not in fit_idx]
-    #sets are three times as fast as list comprehensions but dictionarys are unhasheable
-    #also the node genes need to be matched by innovation bc. they might differ in active/inactive
+    flop_excess_nodes = [gene for gene in flop_node_genome if gene["INDEX"] not in fit_node_genome]
+    """
+    Sets are three times as fast as list comprehensions but dictionarys are unhasheable
+    Also node genes dont need to be matched by anything specific they dont differ appart from index.
+    They technically do differ in type but since all node genomes differ only in their hidden nodes.
+    All node genomes have the same set of sensors and outputs.
+    """
     offspring_node_genome = fit_node_genome + flop_excess_nodes
     offspring_node_genome.sort(key = lambda x : x["INDEX"])
    
@@ -547,8 +561,7 @@ def generation(gen_idx,significance_width,significance_val,link_thresh=0.05,node
 
     species_dict = utils.load_gen_species(gen_idx-1,assign_species = True, bots = bots)
     fitness(bots = bots,species = species_dict)
-    names = utils.load_empty_bot_names(gen_idx)
-      
+    names = utils.load_empty_bot_names(gen_idx)      
     name_idx = 0      
     for species_idx,species in species_dict.items():
         species["MEMBERS"] = [bot_name for bot_name in reproduce(bots,species["MEMBERS"],names[name_idx:len(species["MEMBERS"])])] #from object to name
@@ -556,7 +569,7 @@ def generation(gen_idx,significance_width,significance_val,link_thresh=0.05,node
         name_idx+=len(species["MEMBERS"])
         for bot in species["MEMBERS"]:
             mutation_step(bot,link_thresh,node_thresh,weights_mut_thresh,rand_weight_thresh,pert_rate)#parameters
-
+            
     bots = [Player(bot_name) for bot_name in utils.load_bot_names()] #load the new generation
 
     new_species_representatives = species_represent(species_dict)

@@ -143,4 +143,31 @@ def graph(bot_name,net_type):
     plt.title(f"{bot_name} Added Graph Structure in {net_type} net")
     plt.show()
     
+
+def species_ot():
+    """
+    ______
+    Input:
+        species_dict
+    ______
+    Output:
+        Graph showing the species composition of the population
+        over the generations
+    """ 
+
+    pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     
