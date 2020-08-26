@@ -71,7 +71,7 @@ def save_init_genome(bot_name,init_genome,directory=cwd):
         print("Saving the initial score failed: {}".format(exception))
 
 
-def save_init_score (bot_name,init_score,directory=cwd):
+def save_init_score (bot_name,directory=cwd):
     """
     ______
     Input:
@@ -87,7 +87,7 @@ def save_init_score (bot_name,init_score,directory=cwd):
         os.mkdir(directory + r'\Bots\{}'.format(bot_name))
     try:
         with open(directory + r'\Bots\{}\score.json'.format(bot_name),'x')as score_file: #open mode 'x' creates a file and fails if it already exists
-            json.dump({"SCORE":[init_score]},score_file)#initial score is saved as the first entry of a list
+            json.dump({"SCORE":[]},score_file)#initial score is saved as the first entry of a list
         return
     except Exception as exception:
         print("Saving the initial score failed: {}".format(exception))
@@ -96,7 +96,7 @@ def save_init_score (bot_name,init_score,directory=cwd):
 def save_init_progress(directory=cwd):
     try:
         with open(directory + r'\Bots\progress.json','x')as progress_file: #open mode 'x' creates a file and fails if it already exists
-            json.dump({"PROGRESS":[{"GEN":0,"MAX":0,"AVG":0}]},progress_file)#initial progress is saved as the first entry of a list
+            json.dump([{"GEN":0,"MAX":0,"CONF":0,"AVG":0}],progress_file)#initial progress is saved as the first entry of a list
         return
     except Exception as exception:
         print("Saving the initial progress failed: {}".format(exception))
@@ -146,23 +146,30 @@ def save_generation_species(gen_idx,species_dict,directory=cwd):
         if not str(gen_idx) in species_obj:    
             species_obj[("GEN_"+str(gen_idx))] = species_dict
         else:
-            print(f"Generation Index Conflict: The Species {gen_idx} already exists!")
+            print(f"Generation Index Conflict: The species dictionary for generation{gen_idx} already exists!")
             return
         
         with open(directory + r'\Bots\species.json','w') as species_file:
             json.dump(species_obj,species_file)
-            print(f"Species {gen_idx} saved")
+            print(f"Species dictionary for generation {gen_idx} saved")
             
     except Exception as exception:
         print("Saving species failed: {}".format(exception))            
     
-def save_progress(gen_idx,max_score,avg_score,directory=cwd):
+def save_progress(gen_idx,max_score,max_score_conf,avg_score,directory=cwd):
     try:
         with open(directory + r'\Bots\progress.json','r')as progress_file: #open mode 'r' read 
-            progress_obj = json.load(progress_file)["PROGRESS"]
+            progress_obj = json.load(progress_file)
             progress_file.close()
-                   
-        progress_obj.append({"GEN":gen_idx,"MAX":max_score,"AVG":avg_score})
+        
+        if (progress_duplicates:= [progress_dict for progress_dict in progress_obj if progress_dict["GEN"] == gen_idx]):
+            gen_progress = progress_duplicates[0] #i assume that there is only one duplicate at any time
+            gen_progress["MAX"] = max_score
+            gen_progress["CONF"] = max_score_conf
+            gen_progress["AVG"] = avg_score
+        
+        else:
+            progress_obj.append({"GEN":gen_idx,"MAX":max_score,"CONF":max_score_conf,"AVG":avg_score})
         
         with open(directory + r'\Bots\progress.json','w') as progress_file:
             json.dump(progress_obj,progress_file)
@@ -212,6 +219,15 @@ def load_empty_bot_names(gen_idx,directory=cwd):
     with open(directory + r'\names.json','r') as name_file:
         return json.load(name_file)[str(gen_idx)]
 
+def load_progress(directory=cwd):
+    try:
+        with open(directory + r'\Bots\progress.json','r')as progress_file: #open mode 'r' read 
+            progress_obj = json.load(progress_file)
+            progress_file.close()  
+        return progress_obj
+        
+    except Exception as exception:
+        print("Saving progress failed: {}".format(exception))    
 
 def load_innovation_number(nn_type,directory=cwd):
     #nn_type can be ['play','bid','stm']

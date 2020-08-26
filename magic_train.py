@@ -137,6 +137,9 @@ def fitness (bots,species = {}):
     Output:
         Nothing
         Assigns the adjusted fitness to each bot
+    ______
+        It might be advantagous to add some to the score of the bot
+        Otherwise a negative score might be improved if the bot is inside a large species
     """
     
     for bot in bots:
@@ -145,18 +148,28 @@ def fitness (bots,species = {}):
         bot.fitness = bot_score / len(species[bot.species]["MEMBERS"]) #fitness fn as defined in the paper 
 
 
-def species_allocation(bots,species_dict):
+def species_allocation(bots,species_dict,pop_size):
     """
     ______
     Input:
         Bots with assigned fitness
         species dictionary
+        size of the overall population
     ______
     Output:
         a dictionary that assigns species size to each 
         species according to its performance
     """
-    pass
+    species_sizes ={}
+    pop_fitness_sum = sum([bot.fitness for bot in bots])
+    
+    for species_idx,species in species_dict.items():
+        species_fitness_sum = sum([bot.fitness for bot in bots if bot.species == species_idx])
+        
+        species_sizes[species_idx] = int(np.round(species_fitness_sum/pop_fitness_sum*pop_size))
+    
+    
+    return species_sizes
 
 
 def mutate_link(nn_node_genome,nn_connection_genome,net_type):
@@ -202,6 +215,8 @@ def mutate_link(nn_node_genome,nn_connection_genome,net_type):
         for gene in duplication:
             print(f"Connection {link_mutation['IN']} --> {link_mutation['OUT']} not added to genome. Connection already exists at innovation {gene['INNOVATION']}")
             return nn_connection_genome,None
+
+    print(f"Connection {link_mutation['IN']} --> {link_mutation['OUT']} added to genome.")
     
     nn_connection_genome.append(link_mutation)
     return nn_connection_genome,link_mutation
@@ -442,7 +457,7 @@ def play_to_significance(bot_names,width=10,alpha_thresh=0.1):
         if alpha < alpha_thresh and alpha != 0:
             below_alpha.append(above_alpha.pop(0))
         else:
-            if alpha == 0:
+            if np.isnan(alpha) or alpha == 0:
                 print( f"{above_alpha[0].name}'s score cannot be estimated because he/she has not played yet.")
                 alpha = 0.5
             else:    
@@ -470,7 +485,7 @@ def play_to_significance(bot_names,width=10,alpha_thresh=0.1):
     
     
 
-def reproduce(bots,bot_species,names):
+def reproduce(bots,bot_species,names,species_size,preservation_rate):
     """
     ______
     Input:
@@ -487,15 +502,21 @@ def reproduce(bots,bot_species,names):
         So the first produces another 37.5% of the offspring each
         the Second produces another 18.75%, third produces 9.375% etc.
     """
-    new_generation = []
-    species_size = len(names)
-    bots = [bot for bot in bots if bot.name in bot_species] #from name to object
-    bots.sort(key = lambda bot: bot.fitness,reverse = True)
-
-    bots = bots[:int(np.round(0.9*species_size))] #the worst 10% are eliminated
     
-    for _ in range(int(np.round(species_size*0.25))): 
-        new_generation.append(bots[_].name)
+    print("Species Size: ", species_size)
+    
+    new_generation = []
+    bots = [bot for bot in bots if bot.name in bot_species] #from name to object
+    bots.sort(key = lambda bot: bot.fitness,reverse = True) #highest score to lowest
+    
+
+    for bot in bots[int(np.round(preservation_rate*species_size)):]:
+            utils.incinerate(bot.name) #incinerate the bad part of the generation a priori
+            
+    bots = bots[:int(np.round(preservation_rate*species_size))] #remove the incinerated botnames from the bot list
+    
+    for bot in bots[:int(np.round(species_size*0.25))]:
+        new_generation.append(bot.name)
 
 
     """
@@ -511,7 +532,7 @@ def reproduce(bots,bot_species,names):
         while bot_offspring_count/species_size <= percentage and int(np.round(percentage*species_size)) > 1:
             if (offspring_genome := produce_offspring(bot,random.choice(bots))):
                 utils.save_init_genome(offspring_name:=names[species_offspring_count+bot_offspring_count], produce_offspring(bot,random.choice(bots)))
-                utils.save_init_score(offspring_name,0)
+                utils.save_init_score(offspring_name)
                 new_generation.append(offspring_name)
                 bot_offspring_count+=1
         species_offspring_count+=bot_offspring_count
@@ -529,7 +550,7 @@ def reproduce(bots,bot_species,names):
 
 
 
-def generation(gen_idx,significance_width,significance_val,link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh=0.8,rand_weight_thresh=0.1,pert_rate=0.1):
+def generation(gen_idx,significance_width,significance_val,population_size=100,link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh=0.8,rand_weight_thresh=0.1,pert_rate=0.1,preservation_rate = 0.4):
     """
     ______
     Input:
@@ -537,6 +558,7 @@ def generation(gen_idx,significance_width,significance_val,link_thresh=0.05,node
         species_representatives
         significance_width
         significance_val
+        population_size
         all mutation parameters
     ______
     Output:
@@ -555,19 +577,25 @@ def generation(gen_idx,significance_width,significance_val,link_thresh=0.05,node
     bots = [Player(bot_name) for bot_name in utils.load_bot_names()]
     
     play_to_significance(bots,significance_width,significance_val) #verify significance
-    gen_max_score,gen_avg_score = diagnostics.gen_max_score(significance_width,significance_val),diagnostics.gen_avg_score(significance_width,significance_val)
-    utils.save_progress(gen_idx-1,gen_max_score,gen_avg_score)#log process in case it wasnt last generation
+    gen_max_score,max_score_bot = diagnostics.gen_max_score(significance_width,significance_val)
+    gen_max_score_conf = diagnostics.conf_band_width(significance_val,max_score_bot)
+    gen_avg_score = diagnostics.gen_avg_score(significance_width,significance_val)
+    utils.save_progress(gen_idx-1,gen_max_score,gen_max_score_conf,gen_avg_score)#log process in case it wasnt last generation
     
 
     species_dict = utils.load_gen_species(gen_idx-1,assign_species = True, bots = bots)
     fitness(bots = bots,species = species_dict)
+    species_sizes=species_allocation(bots=bots,species_dict=species_dict,pop_size=population_size)
+    
+    print("Spezies Sizes Dict: ", species_sizes)
+
     names = utils.load_empty_bot_names(gen_idx)      
     name_idx = 0      
     for species_idx,species in species_dict.items():
-        species["MEMBERS"] = [bot_name for bot_name in reproduce(bots,species["MEMBERS"],names[name_idx:len(species["MEMBERS"])])] #from object to name
-        
+        species["MEMBERS"] = [bot_name for bot_name in reproduce(bots,species["MEMBERS"],names[name_idx:len(species["MEMBERS"])],species_sizes[species_idx],preservation_rate)] #from object to name
         name_idx+=len(species["MEMBERS"])
         for bot in species["MEMBERS"]:
+            print(f"Mutating {bot}")
             mutation_step(bot,link_thresh,node_thresh,weights_mut_thresh,rand_weight_thresh,pert_rate)#parameters
             
     bots = [Player(bot_name) for bot_name in utils.load_bot_names()] #load the new generation
@@ -577,12 +605,12 @@ def generation(gen_idx,significance_width,significance_val,link_thresh=0.05,node
     utils.save_generation_species(gen_idx,new_species_dict)#save species under gen idx
 
     play_to_significance(bots,significance_width,significance_val)
-    gen_max_score,gen_avg_score = diagnostics.gen_max_score(significance_width,significance_val),diagnostics.gen_avg_score(significance_width,significance_val)
-    utils.save_progress(gen_idx,gen_max_score,gen_avg_score)
+    gen_max_score,max_score_bot = diagnostics.gen_max_score(significance_width,significance_val)
+    gen_max_score_conf = diagnostics.conf_band_width(significance_val,max_score_bot)
+    gen_avg_score = diagnostics.gen_avg_score(significance_width,significance_val)
+    utils.save_progress(gen_idx,gen_max_score,gen_max_score_conf,gen_avg_score)#log process in case it wasnt last generation
 
     
-
-
     return
 
 
@@ -596,7 +624,7 @@ if __name__ == "__main__": #so it doesnt run when imported
     for gen in range(1,4):
         generation(gen,
                    significance_width=20,significance_val=0.4,
-                   link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh=0.8,rand_weight_thresh=0.1,pert_rate=0.1)
+                   link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh=0.8,rand_weight_thresh=0.1,pert_rate=0.1,preservation_rate = 0.4)
 
 """
 The profiler estimates a game to take ~6.7 sec

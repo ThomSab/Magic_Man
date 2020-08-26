@@ -62,12 +62,9 @@ ________________________________________________________________________________
 The visualization needs a method how to locate the nodes in the graph.
 -->Output nodes on one side Sensor nodes on the other etc.
 __________________________________________________________________________________________________
-[NEW] Species Size Allocation: NOT DONE
+[NEW] Species Size Allocation: DONE
 When does a species grow and by how much? The fitness function is purposed for this bc. it protects small species.
 
-__________________________________________________________________________________________________
-[NEW] Species Size Allocation: NOT DONE
-When does a species grow and by how much? The fitness function is purposed for this bc. it protects small species.
 
 
 

@@ -35,6 +35,24 @@ def score_estim(width,bot_name):
     
     return mean,alpha
     
+def conf_band_width(alpha,bot_name):
+    """
+    ______
+    Input:
+        bot name
+        a significance value alpha
+    ______
+    Output:
+        Returns the width of the confidence band to one side of the mean
+    ______
+        
+    """  
+    bot_score = utils.load_bot_score(bot_name)
+    std = np.std(bot_score)
+    
+    down,up  = stats.norm.interval((1-alpha),loc=0,scale=std)
+    
+    return up
 
 def score_converge(bot_name):
     """
@@ -93,11 +111,17 @@ def bot_scores(width):
  
 
 def gen_max_score(width,alpha):
+    """
+    one score tuple is ( score_estim or (mean,alpha) , bot name)
+    
+    Output:
+        max bot score, bot name
+    """
     score_tuples = bot_scores(width)
     assert not (insignificant_scores := ([tuple[1] for tuple in score_tuples if tuple[0][1] > alpha])), f"Not all bot scores are estimated to a significant level: {insignificant_scores}"
 
     score_tuples.sort(key = lambda score_tuple: score_tuple[0],reverse = True)
-    return score_tuples[0][0][0] #this is garbage code and can be done better
+    return score_tuples[0][0][0],score_tuples[0][1] #this is garbage code and can be done better
     
 def gen_avg_score(width,alpha):
     score_tuples = bot_scores(width)
@@ -158,7 +182,14 @@ def species_ot():
     pass
 
 
-
+def population_progress(directory=cwd):
+    progress = utils.load_progress()
+    max = [gen["MAX"] for gen in progress]
+    conf = [gen["CONF"] for gen in progress]
+    avg = [gen["AVG"] for avg in progress]
+    idx = [gen["GEN"] for gen in progress]
+    pass
+    
 
 
 
