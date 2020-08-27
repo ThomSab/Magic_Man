@@ -50,7 +50,7 @@ def conf_band_width(alpha,bot_name):
     bot_score = utils.load_bot_score(bot_name)
     std = np.std(bot_score)
     
-    down,up  = stats.norm.interval((1-alpha),loc=0,scale=std)
+    down,up  = stats.norm.interval(alpha,loc=0,scale=std)
     
     return up
 
@@ -120,7 +120,7 @@ def gen_max_score(width,alpha):
     score_tuples = bot_scores(width)
     assert not (insignificant_scores := ([tuple[1] for tuple in score_tuples if tuple[0][1] > alpha])), f"Not all bot scores are estimated to a significant level: {insignificant_scores}"
 
-    score_tuples.sort(key = lambda score_tuple: score_tuple[0],reverse = True)
+    score_tuples.sort(key = lambda score_tuple: score_tuple[0][0],reverse = True)
     return score_tuples[0][0][0],score_tuples[0][1] #this is garbage code and can be done better
     
 def gen_avg_score(width,alpha):
@@ -182,13 +182,30 @@ def species_ot():
     pass
 
 
-def population_progress(directory=cwd):
+def population_progress():
     progress = utils.load_progress()
-    max = [gen["MAX"] for gen in progress]
+    max_score = [gen["MAX"] for gen in progress]
     conf = [gen["CONF"] for gen in progress]
     avg = [gen["AVG"] for avg in progress]
-    idx = [gen["GEN"] for gen in progress]
-    pass
+    idx_list = [gen["GEN"] for gen in progress]
+    
+    upperconf,lowerconf = [max_score[idx] + conf[idx] for idx in idx_list], [max_score[idx]-conf[idx] for idx in idx[list]] 
+    
+    
+    plt.title = "Score Progress"
+    
+    plt.plot(idx_list,upperconf,idx_list,lowerconf,color='b',alpha=0.3)
+    plt.fill_between(idx_list,upperconf,lowerconf,facecolor='b')
+    
+    plt.xlabel("Games Played")
+    plt.ylabel("Average Score")
+    
+    plt.plot(idx_list,max_score,color='r',label = "Maximum Score")
+    plt.plot(idx_list,avg,color='b',label = "Average Score")
+    
+    plt.legend()
+    plt.show()
+
     
 
 

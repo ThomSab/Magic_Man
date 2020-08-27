@@ -454,7 +454,7 @@ def play_to_significance(bot_names,width=10,alpha_thresh=0.1):
     
     while len(above_alpha)>=4:
         mean,alpha = diagnostics.score_estim(width,(above_bot := above_alpha[0]).name)
-        if alpha < alpha_thresh and alpha != 0:
+        if alpha <= alpha_thresh and alpha != 0:
             below_alpha.append(above_alpha.pop(0))
         else:
             if np.isnan(alpha) or alpha == 0:
@@ -465,7 +465,8 @@ def play_to_significance(bot_names,width=10,alpha_thresh=0.1):
             above_alpha_copy = above_alpha.copy()
             above_alpha_copy.remove(above_bot)
             #let them play some games
-            for game_idx in range(int(np.ceil((alpha-alpha_thresh)*(10*(100/width)/alpha_thresh)))):
+            n_games = min([100,int(np.ceil((alpha-alpha_thresh)*1000))])
+            for game_idx in range(n_games):
             #this just so happens to be approximately appropriate
             #the closer the alpha is the fewer games the bot has to play to significance
             #this is a rough estimate and can be made more precise
@@ -478,7 +479,29 @@ def play_to_significance(bot_names,width=10,alpha_thresh=0.1):
                 for player in game_pool:
                     utils.add_score(player.name,player.game_score)
 
-                print(game_idx,game_pool)
+                print(f"{game_idx}/{n_games}",game_pool)
+
+
+
+    #The last three bots play with bots that are already significant
+    while above_alpha:
+        game_pool = above_alpha+bot_names[:4-len(above_alpha)]
+        for game_idx in range(5):
+            play_game(game_pool)
+        
+            #show how the score behaves over those games
+            for player in game_pool:
+                utils.add_score(player.name,player.game_score)
+                
+            print(f"Afterburn",game_pool)
+
+      
+        mean,alpha = diagnostics.score_estim(width,(above_bot := above_alpha[0]).name)
+        if alpha<=alpha_thresh:
+            above_alpha.remove(above_bot)
+        print(above_bot,alpha)
+
+
     
     print("Significance achieved")
     return True
@@ -547,8 +570,6 @@ def reproduce(bots,bot_species,names,species_size,preservation_rate):
             utils.incinerate(bot.name) #delete the rest of the old generation
     
     return new_generation
-
-
 
 def generation(gen_idx,significance_width,significance_val,population_size=100,link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh=0.8,rand_weight_thresh=0.1,pert_rate=0.1,preservation_rate = 0.4):
     """
@@ -621,11 +642,13 @@ if __name__ == "__main__": #so it doesnt run when imported
 
     #bots = [Player(bot_name) for bot_name in utils.load_bot_names()]
 
-    for gen in range(1,4):
-        generation(gen,
-                   significance_width=20,significance_val=0.4,
-                   link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh=0.8,rand_weight_thresh=0.1,pert_rate=0.1,preservation_rate = 0.4)
+    current_gen = utils.current_gen()
 
+    while True:
+        generation(current_gen,
+                   significance_width=10,significance_val=0.05,
+                   link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh=0.8,rand_weight_thresh=0.1,pert_rate=0.1,preservation_rate = 0.4)
+        current_gen +=1
 """
 The profiler estimates a game to take ~6.7 sec
 Back-of-the-envelope estimation:

@@ -459,6 +459,19 @@ def incinerate(bot_name,directory=cwd):
         print(f"Incinerating {bot_name} failed: {exception}") 
         return False
 
+def current_gen(directory=cwd):
+    """
+    Input:
+        cwd to load the species_dict
+    Output:
+        the index of the youngest generation
+    """
+    with open(directory + r'\Bots\species.json','r') as species_file:
+        species_obj = json.load(species_file)
+        species_file.close()
+    
+    return max([int(gen_idx[-1]) for gen_idx,species_dict in species_obj.items()])   
+        
         
         
         
