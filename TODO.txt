@@ -64,7 +64,15 @@ The visualization needs a method how to locate the nodes in the graph.
 __________________________________________________________________________________________________
 [NEW] Species Size Allocation: DONE
 When does a species grow and by how much? The fitness function is purposed for this bc. it protects small species.
+__________________________________________________________________________________________________
+[CHANGE] play_to_significance function: NOT DONE
+The function has potential for more effiency. 
+List could be sorted by significance. 
+The afterburn is triggered even when all bots are significant.
 
-
-
+__________________________________________________________________________________________________
+[CHANGE] Data_Structure: NOT DONE
+Statt den Index als Teil des Genoms zu definieren st. [{gene_idx:idx,gene_information},{gene_idx:idx,gene_information},{gene_idx:idx,gene_information}]
+waere es schlauer das ganze genom als dictionary zu definieren st.{idx:{gene_information},idx:{gene_information},idx:{gene_information}}
+jetzt gerade ist das schon implementiert in der Player class aber koennte schoener und einfacher gemacht werden
 

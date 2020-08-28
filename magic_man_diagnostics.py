@@ -186,22 +186,22 @@ def population_progress():
     progress = utils.load_progress()
     max_score = [gen["MAX"] for gen in progress]
     conf = [gen["CONF"] for gen in progress]
-    avg = [gen["AVG"] for avg in progress]
+    avg = [gen["AVG"] for gen in progress]
     idx_list = [gen["GEN"] for gen in progress]
     
-    upperconf,lowerconf = [max_score[idx] + conf[idx] for idx in idx_list], [max_score[idx]-conf[idx] for idx in idx[list]] 
+    upperconf,lowerconf = [max_score[idx] + conf[idx] for idx in idx_list], [max_score[idx]-conf[idx] for idx in idx_list] 
     
     
     plt.title = "Score Progress"
     
     plt.plot(idx_list,upperconf,idx_list,lowerconf,color='b',alpha=0.3)
-    plt.fill_between(idx_list,upperconf,lowerconf,facecolor='b')
+    plt.fill_between(idx_list,upperconf,lowerconf,facecolor='b',alpha=0.1,label='Confidence Band')
     
     plt.xlabel("Games Played")
     plt.ylabel("Average Score")
     
     plt.plot(idx_list,max_score,color='r',label = "Maximum Score")
-    plt.plot(idx_list,avg,color='b',label = "Average Score")
+    plt.plot(idx_list,avg,color='k',label = "Average Score")
     
     plt.legend()
     plt.show()

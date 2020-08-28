@@ -465,7 +465,7 @@ def play_to_significance(bot_names,width=10,alpha_thresh=0.1):
             above_alpha_copy = above_alpha.copy()
             above_alpha_copy.remove(above_bot)
             #let them play some games
-            n_games = min([100,int(np.ceil((alpha-alpha_thresh)*1000))])
+            n_games = min([100,int(np.ceil((alpha-alpha_thresh)*50/alpha))])
             for game_idx in range(n_games):
             #this just so happens to be approximately appropriate
             #the closer the alpha is the fewer games the bot has to play to significance
@@ -480,12 +480,19 @@ def play_to_significance(bot_names,width=10,alpha_thresh=0.1):
                     utils.add_score(player.name,player.game_score)
 
                 print(f"{game_idx}/{n_games}",game_pool)
-
+                
 
 
     #The last three bots play with bots that are already significant
     while above_alpha:
+        
+        mean,alpha = diagnostics.score_estim(width,(above_bot := above_alpha[0]).name)
+        if alpha<=alpha_thresh:
+            above_alpha.remove(above_bot)
+        
         game_pool = above_alpha+bot_names[:4-len(above_alpha)]
+        print(above_bot,alpha)
+
         for game_idx in range(5):
             play_game(game_pool)
         
@@ -496,10 +503,7 @@ def play_to_significance(bot_names,width=10,alpha_thresh=0.1):
             print(f"Afterburn",game_pool)
 
       
-        mean,alpha = diagnostics.score_estim(width,(above_bot := above_alpha[0]).name)
-        if alpha<=alpha_thresh:
-            above_alpha.remove(above_bot)
-        print(above_bot,alpha)
+
 
 
     
@@ -571,39 +575,50 @@ def reproduce(bots,bot_species,names,species_size,preservation_rate):
     
     return new_generation
 
-def generation(gen_idx,significance_width,significance_val,population_size=100,link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh=0.8,rand_weight_thresh=0.1,pert_rate=0.1,preservation_rate = 0.4):
+
+
+def inquiry_step(gen_idx,bots,significance_width,significance_val):
+
     """
     ______
     Input:
+        bots list of objects
         gen_idx
-        species_representatives
-        significance_width
         significance_val
-        population_size
-        all mutation parameters
+        significance_width
+        
     ______
     Output:
-        the species representatives of the new generation
-        the new bots need not be returned as they are saved as genomes
-        and will have to be loaded anyways in the next gen
-    ______
-        Basically main: All functions are called st.:
-        The Members of the current species train until their scores are significant
-        The fittest members then reproduce and mutate
-
-        first generation idx should be one bc the initial species is 0
-        
+        None
+        Bots play until significant score
+        Progress is logged
     """
-
-    bots = [Player(bot_name) for bot_name in utils.load_bot_names()]
     
     play_to_significance(bots,significance_width,significance_val) #verify significance
     gen_max_score,max_score_bot = diagnostics.gen_max_score(significance_width,significance_val)
     gen_max_score_conf = diagnostics.conf_band_width(significance_val,max_score_bot)
     gen_avg_score = diagnostics.gen_avg_score(significance_width,significance_val)
-    utils.save_progress(gen_idx-1,gen_max_score,gen_max_score_conf,gen_avg_score)#log process in case it wasnt last generation
+    utils.save_progress(gen_idx,gen_max_score,gen_max_score_conf,gen_avg_score)#log process in case it wasnt last generation    
     
+    return
 
+
+def progressive_step(gen_idx,bots,population_size,link_thresh,node_thresh,weights_mut_thresh,rand_weight_thresh,pert_rate,preservation_rate):
+    """
+    ______
+    Input:
+        gen_idx
+        population_size
+        all mutation parameters
+    ______
+    Output:
+        None
+    ______
+        The old generation reproduces and most of its members perish depending on the preservation_rate
+        the new generation is speciated and the species dictionary is saved for the next iteration
+        
+        
+    """
     species_dict = utils.load_gen_species(gen_idx-1,assign_species = True, bots = bots)
     fitness(bots = bots,species = species_dict)
     species_sizes=species_allocation(bots=bots,species_dict=species_dict,pop_size=population_size)
@@ -624,31 +639,66 @@ def generation(gen_idx,significance_width,significance_val,population_size=100,l
     new_species_representatives = species_represent(species_dict)
     new_species_dict = speciation(bots=bots,species_dict = new_species_representatives)
     utils.save_generation_species(gen_idx,new_species_dict)#save species under gen idx
-
-    play_to_significance(bots,significance_width,significance_val)
-    gen_max_score,max_score_bot = diagnostics.gen_max_score(significance_width,significance_val)
-    gen_max_score_conf = diagnostics.conf_band_width(significance_val,max_score_bot)
-    gen_avg_score = diagnostics.gen_avg_score(significance_width,significance_val)
-    utils.save_progress(gen_idx,gen_max_score,gen_max_score_conf,gen_avg_score)#log process in case it wasnt last generation
-
     
     return
 
 
+def generation(gen_idx,significance_width,significance_val,population_size=100,link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh=0.8,rand_weight_thresh=0.1,pert_rate=0.1,preservation_rate = 0.4):
+    """
+    ______
+    Input:
+        gen_idx
+        significance_width
+        significance_val
+        population_size
+        all mutation parameters
+    ______
+    Output:
+        the species representatives of the new generation
+        the new bots need not be returned as they are saved as genomes
+        and will have to be loaded anyways in the next gen
+    ______
+        Basically main: All functions are called st.:
+        The Members of the current species train until their scores are significant
+        The fittest members then reproduce and mutate
 
+        first generation idx should be one bc the initial species is 0
+        
+    """
+
+    bots = [Player(bot_name) for bot_name in utils.load_bot_names()]
+    
+
+    inquiry_step(gen_idx-1,bots,significance_width,significance_val)
+
+    progressive_step(gen_idx,bots,preservation_rate,population_size,link_thresh,node_thresh,weights_mut_thresh,rand_weight_thresh,pert_rate,preservation_rate)
+
+    inquiry_step(gen_idx,bots,significance_width,significance_val)
+
+    
+    return
+
+def start_training():
+    current_gen = utils.current_gen()
+        
+    while True:
+        current_gen +=1
+        generation(current_gen,
+                   significance_width=20,significance_val=0.3,
+                   link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh=0.8,rand_weight_thresh=0.1,pert_rate=0.1,preservation_rate = 0.4)
+
+
+        
 
 if __name__ == "__main__": #so it doesnt run when imported
     print(txt)
 
     #bots = [Player(bot_name) for bot_name in utils.load_bot_names()]
 
-    current_gen = utils.current_gen()
-
-    while True:
-        generation(current_gen,
-                   significance_width=10,significance_val=0.05,
-                   link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh=0.8,rand_weight_thresh=0.1,pert_rate=0.1,preservation_rate = 0.4)
-        current_gen +=1
+    #start_training()
+    
+    diagnostics.population_progress()
+    
 """
 The profiler estimates a game to take ~6.7 sec
 Back-of-the-envelope estimation:

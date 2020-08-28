@@ -152,10 +152,13 @@ class Player:
             self.output_nodes = [ node for node in self.nodes if node.node_type == "OUTPUT"]
             self.sensor_nodes = [ node for node in self.nodes if node.node_type == "SENSOR"]
             
+            
+            node_index_dict = {str(node.index):node for node in self.nodes} #data structure im TODO
+            
             for node in self.output_nodes + self.hidden_nodes:
                 for connection in connection_genome:
                     if connection["OUT"] == node.index and connection["ENABLED"]:
-                        local_input_node = [node for node in self.nodes if node.index == connection["IN"]][0]
+                        local_input_node = node_index_dict[str(connection["IN"])]
                         node.lins.append({"node":local_input_node,"connection":connection})             
             #lin generation could also be a onelinerup to here, but this seems more intuitive
 
