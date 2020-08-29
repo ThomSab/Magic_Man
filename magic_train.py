@@ -486,23 +486,24 @@ def play_to_significance(bot_names,width=10,alpha_thresh=0.1):
     #The last three bots play with bots that are already significant
     while above_alpha:
         
-        mean,alpha = diagnostics.score_estim(width,(above_bot := above_alpha[0]).name)
-        if alpha<=alpha_thresh:
-            above_alpha.remove(above_bot)
-        
-        game_pool = above_alpha+bot_names[:4-len(above_alpha)]
-        print(above_bot,alpha)
+        for bot in above_alpha:
+            mean,alpha = diagnostics.score_estim(width,(above_bot := above_alpha[0]).name)  
+            if alpha<=alpha_thresh:
+                above_alpha.remove(above_bot)
+            else:
+                game_pool = above_alpha+bot_names[:4-len(above_alpha)]
+                print(above_bot,alpha)
 
-        for game_idx in range(5):
-            play_game(game_pool)
-        
-            #show how the score behaves over those games
-            for player in game_pool:
-                utils.add_score(player.name,player.game_score)
+                for game_idx in range(5):
+                    play_game(game_pool)
                 
-            print(f"Afterburn",game_pool)
+                    #show how the score behaves over those games
+                    for player in game_pool:
+                        utils.add_score(player.name,player.game_score)
+                        
+                    print(f"Afterburn",game_pool)
 
-      
+          
 
 
 
@@ -667,12 +668,11 @@ def generation(gen_idx,significance_width,significance_val,population_size=100,l
     """
 
     bots = [Player(bot_name) for bot_name in utils.load_bot_names()]
-    
-
     inquiry_step(gen_idx-1,bots,significance_width,significance_val)
 
-    progressive_step(gen_idx,bots,preservation_rate,population_size,link_thresh,node_thresh,weights_mut_thresh,rand_weight_thresh,pert_rate,preservation_rate)
+    progressive_step(gen_idx,bots,population_size,link_thresh,node_thresh,weights_mut_thresh,rand_weight_thresh,pert_rate,preservation_rate)
 
+    bots = [Player(bot_name) for bot_name in utils.load_bot_names()]
     inquiry_step(gen_idx,bots,significance_width,significance_val)
 
     
@@ -684,7 +684,7 @@ def start_training():
     while True:
         current_gen +=1
         generation(current_gen,
-                   significance_width=20,significance_val=0.3,
+                   significance_width=10,significance_val=0.05,
                    link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh=0.8,rand_weight_thresh=0.1,pert_rate=0.1,preservation_rate = 0.4)
 
 
