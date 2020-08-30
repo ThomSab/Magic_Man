@@ -164,7 +164,8 @@ def graph(bot_name,net_type):
     nx.draw_planar(nn_graph,arrows = True,alpha=0.5)
     nx.draw_networkx_labels(nn_graph,pos = nx.planar_layout(nn_graph))
     
-    plt.title(f"{bot_name} Added Graph Structure in {net_type} net")
+    plt.title = f"{bot_name} Added Graph Structure in {net_type} net"
+    plt.legend()
     plt.show()
     
 

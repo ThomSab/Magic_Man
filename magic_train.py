@@ -362,13 +362,8 @@ def produce_net_node_offspring(fit_node_genome,flop_node_genome):
     Output:
         offspring neural net node genome
     """
-    flop_excess_nodes = [gene for gene in flop_node_genome if gene["INDEX"] not in fit_node_genome]
-    """
-    Sets are three times as fast as list comprehensions but dictionarys are unhasheable
-    Also node genes dont need to be matched by anything specific they dont differ appart from index.
-    They technically do differ in type but since all node genomes differ only in their hidden nodes.
-    All node genomes have the same set of sensors and outputs.
-    """
+    flop_excess_nodes = [node_gene for node_gene in flop_node_genome if node_gene not in fit_node_genome]
+
     offspring_node_genome = fit_node_genome + flop_excess_nodes
     offspring_node_genome.sort(key = lambda x : x["INDEX"])
    
@@ -494,7 +489,7 @@ def play_to_significance(bot_names,width=10,alpha_thresh=0.1):
                 game_pool = above_alpha+bot_names[:4-len(above_alpha)]
                 print(above_bot,alpha)
 
-                for game_idx in range(5):
+                for game_idx in range(3):
                     play_game(game_pool)
                 
                     #show how the score behaves over those games
@@ -678,14 +673,14 @@ def generation(gen_idx,significance_width,significance_val,population_size=100,l
     
     return
 
-def start_training():
+def start_training(significance_width=10,significance_val=0.05,link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh=0.8,rand_weight_thresh=0.1,pert_rate=0.1,preservation_rate = 0.4):
     current_gen = utils.current_gen()
         
     while True:
         current_gen +=1
         generation(current_gen,
-                   significance_width=10,significance_val=0.05,
-                   link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh=0.8,rand_weight_thresh=0.1,pert_rate=0.1,preservation_rate = 0.4)
+                   significance_width,significance_val,
+                   link_thresh,node_thresh,weights_mut_thresh,rand_weight_thresh,pert_rate,preservation_rate)
 
 
         
@@ -695,9 +690,9 @@ if __name__ == "__main__": #so it doesnt run when imported
 
     #bots = [Player(bot_name) for bot_name in utils.load_bot_names()]
 
-    #start_training()
+    start_training(significance_val=0.45,significance_width=40)
     
-    diagnostics.population_progress()
+    
     
 """
 The profiler estimates a game to take ~6.7 sec
