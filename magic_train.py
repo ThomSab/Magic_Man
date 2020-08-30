@@ -160,13 +160,16 @@ def species_allocation(bots,species_dict,pop_size):
         a dictionary that assigns species size to each 
         species according to its performance
     """
+
+    print(pop_size,"Pop Size")
+    
     species_sizes ={}
     pop_fitness_sum = sum([bot.fitness for bot in bots])
     
     for species_idx,species in species_dict.items():
         species_fitness_sum = sum([bot.fitness for bot in bots if bot.species == species_idx])
         
-        species_sizes[species_idx] = int(np.round(species_fitness_sum/pop_fitness_sum*pop_size))
+        species_sizes[species_idx] = int(np.round(pop_size * (species_fitness_sum/pop_fitness_sum)))
     
     
     return species_sizes
@@ -474,7 +477,7 @@ def play_to_significance(bot_names,width=10,alpha_thresh=0.1):
                 for player in game_pool:
                     utils.add_score(player.name,player.game_score)
 
-                print(f"{game_idx}/{n_games}",game_pool)
+                print(f"{game_idx+1}/{n_games}",game_pool)
                 
 
 
@@ -673,13 +676,13 @@ def generation(gen_idx,significance_width,significance_val,population_size=100,l
     
     return
 
-def start_training(significance_width=10,significance_val=0.05,link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh=0.8,rand_weight_thresh=0.1,pert_rate=0.1,preservation_rate = 0.4):
+def start_training(significance_width=10,significance_val=0.05,population_size=100,link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh=0.8,rand_weight_thresh=0.1,pert_rate=0.1,preservation_rate = 0.4):
     current_gen = utils.current_gen()
         
     while True:
         current_gen +=1
         generation(current_gen,
-                   significance_width,significance_val,
+                   significance_width,significance_val,population_size,
                    link_thresh,node_thresh,weights_mut_thresh,rand_weight_thresh,pert_rate,preservation_rate)
 
 
