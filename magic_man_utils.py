@@ -96,7 +96,7 @@ def save_init_score (bot_name,directory=cwd):
 def save_init_progress(directory=cwd):
     try:
         with open(directory + r'\Bots\progress.json','x')as progress_file: #open mode 'x' creates a file and fails if it already exists
-            json.dump([{"GEN":0,"MAX":0,"CONF":0,"AVG":0}],progress_file)#initial progress is saved as the first entry of a list
+            json.dump([{"GEN":0,"MAX":0,"BOT":"NOBOT","CONF":0,"AVG":0}],progress_file)#initial progress is saved as the first entry of a list
         return
     except Exception as exception:
         print("Saving the initial progress failed: {}".format(exception))
@@ -156,7 +156,7 @@ def save_generation_species(gen_idx,species_dict,directory=cwd):
     except Exception as exception:
         print("Saving species failed: {}".format(exception))            
     
-def save_progress(gen_idx,max_score,max_score_conf,avg_score,directory=cwd):
+def save_progress(gen_idx,max_score,max_bot,max_score_conf,avg_score,directory=cwd):
     try:
         with open(directory + r'\Bots\progress.json','r')as progress_file: #open mode 'r' read 
             progress_obj = json.load(progress_file)
@@ -165,6 +165,7 @@ def save_progress(gen_idx,max_score,max_score_conf,avg_score,directory=cwd):
         if (progress_duplicates:= [progress_dict for progress_dict in progress_obj if progress_dict["GEN"] == gen_idx]):
             gen_progress = progress_duplicates[0] #i assume that there is only one duplicate at any time
             gen_progress["MAX"] = max_score
+            gen_progress["BOT"] = max_bot
             gen_progress["CONF"] = max_score_conf
             gen_progress["AVG"] = avg_score
         

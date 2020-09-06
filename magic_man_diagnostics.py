@@ -84,7 +84,7 @@ def score_hist(bot_name):
     
     """
     bot_score = utils.load_bot_score(bot_name)
-    plt.title(f"{bot_name} Score histogram")
+    plt.title(label = f"{bot_name} Score histogram")
     plt.xlabel("Score")
     plt.hist(bot_score,bins=120,range=(-600,600))
     plt.axvline(np.mean(bot_score),color='r',label='Current AVG {}'.format(np.round(np.mean(bot_score)),2))
@@ -164,7 +164,7 @@ def graph(bot_name,net_type):
     nx.draw_planar(nn_graph,arrows = True,alpha=0.5)
     nx.draw_networkx_labels(nn_graph,pos = nx.planar_layout(nn_graph))
     
-    plt.title = f"{bot_name} Added Graph Structure in {net_type} net"
+    plt.title(label = f"{bot_name} Added Graph Structure in {net_type} net")
     plt.legend()
     plt.show()
     
@@ -193,16 +193,16 @@ def population_progress():
     upperconf,lowerconf = [max_score[idx] + conf[idx] for idx in idx_list], [max_score[idx]-conf[idx] for idx in idx_list] 
     
     
-    plt.title = "Score Progress"
+    plt.title(label = "Score Progress")
     
-    plt.plot(idx_list,upperconf,idx_list,lowerconf,color='b',alpha=0.3)
+    plt.plot(idx_list,upperconf,idx_list,lowerconf,color='b',alpha=0.3,linewidth=0)
     plt.fill_between(idx_list,upperconf,lowerconf,facecolor='b',alpha=0.1,label='Confidence Band')
     
-    plt.xlabel("Games Played")
-    plt.ylabel("Average Score")
+    plt.xlabel("Generation")
+    plt.ylabel("Score")
     
-    plt.plot(idx_list,max_score,color='r',label = "Maximum Score")
-    plt.plot(idx_list,avg,color='k',label = "Average Score")
+    plt.plot(idx_list,max_score,color='r',label = "Maximum Score",linewidth=0.5)
+    plt.plot(idx_list,avg,color='k',label = "Average Score",linewidth=0.5)
     
     plt.legend()
     plt.show()

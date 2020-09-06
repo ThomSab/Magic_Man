@@ -18,7 +18,23 @@ node.activation = 1
 number_of_players = 4
 
 class Game:
-    def __init__(self,n_players,players,deck):
+    """
+    The Game Class
+    No Documentation
+    ______
+        Recent Features:
+        True Trump:
+            In the original game, a new trump is chosen for each new round
+            While it is fun, this has no real effect on the game
+        No True Trump:
+            The game keeps a single trump - in this case red, for no reason but red beeing trump "0"
+            This way it should be a lot easier for the bots to learn
+            Otherwise they would have to be a lot more complex bc the cards do different things each round
+    
+    """
+    def __init__(self,n_players,players,deck,true_trump=False):
+
+        
         self.deck = deck
         self.n_players = n_players
         if (n_players < 3) or (n_players > 6):
@@ -27,6 +43,7 @@ class Game:
         self.max_rounds = int(60/n_players)
         self.current_round = 1
         self.bids = []
+        self.true_trump = true_trump
         self.trump = 6 #initial value only --> the trump indices only go up to 5
         #score board
         random.shuffle(self.players)
@@ -115,14 +132,19 @@ class Game:
             for player in self.players:
                 player.cards.append(round_deck.pop(-1)) 
                 #pop not only removes the item at index but also returns it
-                
-        if not lastround:
-            trump_card = round_deck.pop(-1)        
-            self.trump = trump_card.color  
-            #print('Trumpf ist {}'.format(deck.colors[trump_card.color]))
-        elif lastround:
-            self.trump = 5 #Narr --> kein Trumpf weil letzte Runde
-       
+        
+        if self.true_trump:
+            if not lastround:
+                trump_card = round_deck.pop(-1)        
+                self.trump = trump_card.color  
+
+            elif lastround:
+                self.trump = 5 #Narr --> kein Trumpf weil letzte Runde
+        elif not self.true_trump:
+            self.trump = 0 #trump is red every time so the bots have a better time learning
+            
+        print('Trump is {}'.format(deck.colors[self.trump]))
+           
         for player in self.players:
             player.round_score = 0
          #   print(player.name,player.cards)

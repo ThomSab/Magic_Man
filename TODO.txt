@@ -53,10 +53,12 @@ ________________________________________________________________________________
 Implement a non-hacky function to monitor what is going on inside the algorithm.
 
 __________________________________________________________________________________________________
-[CHANGE] Information Sets: NOT DONE
+[CHANGE] Information Sets: DONE
 Is the information set that the bot recieves in the game sufficient.
--->Should be reviewed
-
+The Information set was complete but not efficient enough to make solution finding feasible.
+The bots had information about the trump color but had no direct indication that the function of the cards changed.
+I implemented an option to keep the trump color constant as it serves only a aesthetic purposes.
+Now the only trump is red and the bots should be able to learn faster.
 __________________________________________________________________________________________________
 [NEW] Neural Net Visualization: NOT DONE
 The visualization needs a method how to locate the nodes in the graph.
@@ -68,10 +70,9 @@ ________________________________________________________________________________
 [CHANGE] play_to_significance function: NOT DONE
 The function has potential for more effiency. 
 List could be sorted by significance. 
-The afterburn is triggered even when all bots are significant.
 
 __________________________________________________________________________________________________
-[CHANGE] Data_Structure: NOT DONE
+[CHANGE] Data_Structure: NOT DONE (BUT OPTIONAL)
 Statt den Index als Teil des Genoms zu definieren st. [{gene_idx:idx,gene_information},{gene_idx:idx,gene_information},{gene_idx:idx,gene_information}]
 waere es schlauer das ganze genom als dictionary zu definieren st.{idx:{gene_information},idx:{gene_information},idx:{gene_information}}
 jetzt gerade ist das schon implementiert in der Player class aber koennte schoener und einfacher gemacht werden

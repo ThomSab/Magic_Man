@@ -332,6 +332,34 @@ def mutation_step(bot_name,link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh
             utils.save_bot_genome(bot_name,bot_genome)
 
 
+def mutate_species(species_names,link_thresh,node_thresh,weights_mut_thresh,rand_weight_thresh,pert_rate):
+    """
+    ______
+    Input:
+        list of bot names that belong to one species
+        mutation parameters
+    ______
+    Output:
+        None
+    ______
+        All bot genomes in the given species are mutated randomly
+        except if the species is larger than five, in which case a single champion is spared from mutation
+
+    """
+    if len(species_names)>=5:
+        species_members = species_names.copy()
+        species_member_scores = { bot_name: diagnostics.score_estim(999,bot_name)[0] for bot_name in species_members }
+        species_members.sort(key = lambda x : species_member_scores[x],reverse=True)
+        for bot in species_members[1:]:
+            print(f"Mutating {bot}")
+            mutation_step(bot,link_thresh,node_thresh,weights_mut_thresh,rand_weight_thresh,pert_rate)
+    else:
+        for bot in species_names:
+            print(f"Mutating {bot}")
+            mutation_step(bot,link_thresh,node_thresh,weights_mut_thresh,rand_weight_thresh,pert_rate)    
+    return
+
+
 
 def produce_net_connection_offspring(fit_connection_genome,flop_connection_genome):
     """
@@ -564,9 +592,9 @@ def reproduce(bots,bot_species,names,species_size,preservation_rate):
         species_offspring_count+=bot_offspring_count
         percentage /= 2
 
-
+    print(f"New Species Size is {len(new_generation)} \n{len(new_generation)-species_size} bots are killed off.")
     new_generation=new_generation[:species_size]#st the species does not get larger than anticipated
-    print(f"New Species Size is {len(new_generation)}")
+    
     
     
     for bot in [bot for bot in bots if bot.name not in new_generation]:
@@ -597,7 +625,7 @@ def inquiry_step(gen_idx,bots,significance_width,significance_val):
     gen_max_score,max_score_bot = diagnostics.gen_max_score(significance_width,significance_val)
     gen_max_score_conf = diagnostics.conf_band_width(significance_val,max_score_bot)
     gen_avg_score = diagnostics.gen_avg_score(significance_width,significance_val)
-    utils.save_progress(gen_idx,gen_max_score,gen_max_score_conf,gen_avg_score)#log process in case it wasnt last generation    
+    utils.save_progress(gen_idx,gen_max_score,max_score_bot,gen_max_score_conf,gen_avg_score)#log process in case it wasnt last generation    
     
     return
 
@@ -627,11 +655,11 @@ def progressive_step(gen_idx,bots,population_size,link_thresh,node_thresh,weight
     names = utils.load_empty_bot_names(gen_idx)      
     name_idx = 0      
     for species_idx,species in species_dict.items():
-        species["MEMBERS"] = [bot_name for bot_name in reproduce(bots,species["MEMBERS"],names[name_idx:len(species["MEMBERS"])],species_sizes[species_idx],preservation_rate)] #from object to name
+        species["MEMBERS"] = reproduce(bots,species["MEMBERS"],names[name_idx:len(species["MEMBERS"])],species_sizes[species_idx],preservation_rate) #from name to name
         name_idx+=len(species["MEMBERS"])
-        for bot in species["MEMBERS"]:
-            print(f"Mutating {bot}")
-            mutation_step(bot,link_thresh,node_thresh,weights_mut_thresh,rand_weight_thresh,pert_rate)#parameters
+
+        mutate_species(species["MEMBERS"],link_thresh,node_thresh,weights_mut_thresh,rand_weight_thresh,pert_rate)
+
             
     bots = [Player(bot_name) for bot_name in utils.load_bot_names()] #load the new generation
 
@@ -693,7 +721,8 @@ if __name__ == "__main__": #so it doesnt run when imported
 
     #bots = [Player(bot_name) for bot_name in utils.load_bot_names()]
 
-    start_training(significance_val=0.45,significance_width=40)
+    diagnostics.population_progress()
+    start_training(significance_val=0.4,significance_width=30)
     
     
     
