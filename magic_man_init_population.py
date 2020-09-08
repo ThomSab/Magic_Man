@@ -18,7 +18,7 @@ def initial_genome(N_bid_sensors,N_bid_outputs,
 
 
     bid_sensors = [{"INDEX":idx              ,"TYPE":"SENSOR", "BIAS":np.random.normal(size = 1)[0]} for idx in range(N_bid_sensors)]
-    bid_outputs = [{"INDEX":N_bid_sensors+idx,"TYPE":"OUTPUT", "BIAS":0} for idx in range(N_bid_outputs)]
+    bid_outputs = [{"INDEX":N_bid_sensors+idx,"TYPE":"OUTPUT", "BIAS":np.random.normal(size = 1)[0]} for idx in range(N_bid_outputs)]
 
    
     play_sensors= [{"INDEX":idx               ,"TYPE":"SENSOR", "BIAS":np.random.normal(size = 1)[0]} for idx in range(N_play_sensors)]
