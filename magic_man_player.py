@@ -147,7 +147,7 @@ class Player:
         Generates a NN
         """
         def __init__ (self,node_genome,connection_genome,net_sigmoid_function):
-            self.nodes = [self.Node(node["INDEX"],node["TYPE"],net_sigmoid_function) for node in node_genome]
+            self.nodes = [self.Node(node["INDEX"],node["TYPE"],node["BIAS"],net_sigmoid_function) for node in node_genome]
             self.hidden_nodes = [ node for node in self.nodes if node.node_type == "HIDDEN"]
             self.output_nodes = [ node for node in self.nodes if node.node_type == "OUTPUT"]
             self.sensor_nodes = [ node for node in self.nodes if node.node_type == "SENSOR"]
@@ -205,11 +205,12 @@ class Player:
 
    
         class Node:
-            def __init__(self,index,node_type,node_sigmoid_function):
+            def __init__(self,index,node_type,node_bias,node_sigmoid_function):
                 self.index  = index
                 self.node_type  = node_type  
                 self.activation = None
                 self.sigmoid = node_sigmoid_function
+                self.bias = node_bias
                 #LINs --> Local Input Nodes
                 #first all nodes are constructed through the node_genome
                 #then the lins are determined through the connection_genome
@@ -234,7 +235,7 @@ class Player:
 
                 if self.activation is None:
                     #local_input_node or lin is a list of dictionarys [{"node":node,"connection":connection},...]
-                    self.activation = self.sigmoid(sum([lin["connection"]["WEIGHT"]*lin["node"].node_activation() for lin in self.lins]))
+                    self.activation = self.sigmoid(sum([lin["connection"]["WEIGHT"]*lin["node"].node_activation()  for lin in self.lins])+ self.bias)
                 return self.activation
         
         

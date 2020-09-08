@@ -246,7 +246,7 @@ def mutate_node(nn_node_genome,nn_connection_genome,net_type):
     #the index of the last added node
     #(could also be len(nn_node_genome) but this is constant time)
 
-    nn_node_genome.append(new_node:={"INDEX" : n_nodes+1, "TYPE" : "HIDDEN"})
+    nn_node_genome.append(new_node:={"INDEX" : n_nodes+1, "TYPE" : "HIDDEN","BIAS" : np.random.normal(size = 1)[0]})
 
     target_link_idx = np.random.randint(len(nn_connection_genome))
     target_link     = nn_connection_genome[target_link_idx]
@@ -272,7 +272,7 @@ def mutate_node(nn_node_genome,nn_connection_genome,net_type):
 
 
 
-def mutate_weights(connection_genome,random_weight_thresh,pert_rate):
+def mutate_weights(connection_genome,node_genome,random_weight_thresh,pert_rate):
     """
     ______
     Input:
@@ -284,13 +284,22 @@ def mutate_weights(connection_genome,random_weight_thresh,pert_rate):
     Output:
         The input Genome with all the weights mutated or perturbed
     """
-    random_mutation_list = [True if random_chance <= random_weight_thresh else False for random_chance in np.random.uniform(size=len(connection_genome))]
+    random_connection_mutation_list = [True if random_chance <= random_weight_thresh else False for random_chance in np.random.uniform(size=len(connection_genome))]
+    random_node_mutation_list       = [True if random_chance <= random_weight_thresh else False for random_chance in np.random.uniform(size=len(node_genome))]
     
-    for gene_idx,random_mutation in enumerate(random_mutation_list):
+    for gene_idx,random_mutation in enumerate(random_connection_mutation_list):
         if random_mutation:
             connection_genome[gene_idx]["WEIGHT"]  = np.random.normal(size = 1)[0]
         else:
             connection_genome[gene_idx]["WEIGHT"] += np.random.normal(loc=0,scale=pert_rate,size = 1)[0] #the paper says "uniformly perturbed" but its not exactly defined how
+
+    for gene_idx,random_mutation in enumerate(random_node_mutation_list):
+        if random_mutation:
+            node_genome[gene_idx]["BIAS"]  = np.random.normal(size = 1)[0]
+        else:
+            node_genome[gene_idx]["BIAS"] += np.random.normal(loc=0,scale=pert_rate,size = 1)[0] #the paper says "uniformly perturbed" but its not exactly defined how
+
+    print("Weights and Biases mutated.")
     
     return connection_genome
 
@@ -324,7 +333,7 @@ def mutation_step(bot_name,link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh
                 node_genome,connection_genome,in_mutation,out_mutation = mutate_node(node_genome,connection_genome,net)
 
             if weights_mut:
-                connection_genome = mutate_weights(connection_genome,rand_weight_thresh,pert_rate=pert_rate)#does not need the net type bc no innovation numbers are incremented
+                connection_genome = mutate_weights(connection_genome,node_genome,rand_weight_thresh,pert_rate=pert_rate)#does not need the net type bc no innovation numbers are incremented
 
             bot_genome["{}_connection_genome".format(net)]   = connection_genome
             bot_genome["{}_node_genome".format(net)]         = node_genome
@@ -719,11 +728,10 @@ def start_training(significance_width=10,significance_val=0.05,population_size=1
 if __name__ == "__main__": #so it doesnt run when imported
     print(txt)
 
-    #bots = [Player(bot_name) for bot_name in utils.load_bot_names()]
+    bots = [Player(bot_name) for bot_name in utils.load_bot_names()[:4]]
 
-    diagnostics.population_progress()
-    #start_training(significance_val=0.1,significance_width=5,pert_rate=0.1)
-    
+    #diagnostics.population_progress()
+    start_training(significance_val=0.1,significance_width=5,pert_rate=0.5)
     
     
 """

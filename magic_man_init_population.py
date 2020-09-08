@@ -1,5 +1,6 @@
 import os
 import json
+import numpy as np
 import magic_man_utils as utils
 from magic_train import species_represent,speciation,mutation_step
 from magic_man_player import Player
@@ -16,26 +17,26 @@ def initial_genome(N_bid_sensors,N_bid_outputs,
     """
 
 
-    bid_sensors = [{"INDEX":idx              ,"TYPE":"SENSOR"} for idx in range(N_bid_sensors)]
-    bid_outputs = [{"INDEX":N_bid_sensors+idx,"TYPE":"OUTPUT"} for idx in range(N_bid_outputs)]
+    bid_sensors = [{"INDEX":idx              ,"TYPE":"SENSOR", "BIAS":np.random.normal(size = 1)[0]} for idx in range(N_bid_sensors)]
+    bid_outputs = [{"INDEX":N_bid_sensors+idx,"TYPE":"OUTPUT", "BIAS":0} for idx in range(N_bid_outputs)]
 
    
-    play_sensors= [{"INDEX":idx               ,"TYPE":"SENSOR"} for idx in range(N_play_sensors)]
-    play_outputs= [{"INDEX":N_play_sensors+idx,"TYPE":"OUTPUT"} for idx in range(N_play_outputs)]
+    play_sensors= [{"INDEX":idx               ,"TYPE":"SENSOR", "BIAS":np.random.normal(size = 1)[0]} for idx in range(N_play_sensors)]
+    play_outputs= [{"INDEX":N_play_sensors+idx,"TYPE":"OUTPUT", "BIAS":np.random.normal(size = 1)[0]} for idx in range(N_play_outputs)]
 
 
-    stm_sensors= [{"INDEX":idx              ,"TYPE":"SENSOR"} for idx in range(N_stm_sensors)]
-    stm_outputs= [{"INDEX":N_stm_sensors+idx,"TYPE":"OUTPUT"} for idx in range(N_stm_outputs)]
+    stm_sensors= [{"INDEX":idx              ,"TYPE":"SENSOR", "BIAS":np.random.normal(size = 1)[0]} for idx in range(N_stm_sensors)]
+    stm_outputs= [{"INDEX":N_stm_sensors+idx,"TYPE":"OUTPUT", "BIAS":np.random.normal(size = 1)[0]} for idx in range(N_stm_outputs)]
 
     #these are oneliners
     #python i love u
-    bid_connections = [{"IN": sensor_idx, "OUT": output_idx,"WEIGHT": 0, "ENABLED": 1, "INNOVATION": N_bid_outputs*sensor_idx+(output_idx-N_bid_sensors)+1}
+    bid_connections = [{"IN": sensor_idx, "OUT": output_idx,"WEIGHT": np.random.normal(size = 1)[0], "ENABLED": 1, "INNOVATION": N_bid_outputs*sensor_idx+(output_idx-N_bid_sensors)+1}
                         for sensor_idx in range(N_bid_sensors) for output_idx in range(N_bid_sensors,(N_bid_sensors+N_bid_outputs))]
 
-    play_connections = [{"IN": sensor_idx, "OUT": output_idx,"WEIGHT": 0, "ENABLED": 1, "INNOVATION": N_play_outputs*sensor_idx+output_idx-N_play_sensors+1}
+    play_connections = [{"IN": sensor_idx, "OUT": output_idx,"WEIGHT": np.random.normal(size = 1)[0], "ENABLED": 1, "INNOVATION": N_play_outputs*sensor_idx+output_idx-N_play_sensors+1}
                         for sensor_idx in range(N_play_sensors) for output_idx in range(N_play_sensors,(N_play_sensors+N_play_outputs))]
 
-    stm_connections = [{"IN": sensor_idx, "OUT": output_idx,"WEIGHT": 0, "ENABLED": 1, "INNOVATION": N_stm_outputs*sensor_idx+output_idx-N_stm_sensors+1}
+    stm_connections = [{"IN": sensor_idx, "OUT": output_idx,"WEIGHT": np.random.normal(size = 1)[0], "ENABLED": 1, "INNOVATION": N_stm_outputs*sensor_idx+output_idx-N_stm_sensors+1}
                         for sensor_idx in range(N_stm_sensors) for output_idx in range(N_stm_sensors,(N_stm_sensors+N_stm_outputs))]
 
     return {
