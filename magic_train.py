@@ -722,7 +722,7 @@ if __name__ == "__main__": #so it doesnt run when imported
     #bots = [Player(bot_name) for bot_name in utils.load_bot_names()]
 
     diagnostics.population_progress()
-    start_training(significance_val=0.4,significance_width=30)
+    #start_training(significance_val=0.1,significance_width=5,pert_rate=0.1)
     
     
     
