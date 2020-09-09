@@ -170,7 +170,7 @@ def save_progress(gen_idx,max_score,max_bot,max_score_conf,avg_score,directory=c
             gen_progress["AVG"] = avg_score
         
         else:
-            progress_obj.append({"GEN":gen_idx,"MAX":max_score,"CONF":max_score_conf,"AVG":avg_score})
+            progress_obj.append({"GEN":gen_idx,"MAX":max_score,"BOT":max_bot,"CONF":max_score_conf,"AVG":avg_score})
         
         with open(directory + r'\Bots\progress.json','w') as progress_file:
             json.dump(progress_obj,progress_file)
