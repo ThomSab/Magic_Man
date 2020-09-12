@@ -2,7 +2,7 @@ import os
 import json
 import numpy as np
 import magic_man_utils as utils
-from magic_train import species_represent,speciation,mutation_step
+from magic_man_evolution import species_represent,speciation,mutation_step
 from magic_man_player import Player
 
 N_bid_sensors,N_bid_outputs,N_play_sensors,N_play_outputs,N_stm_sensors,N_stm_outputs = utils.init_list

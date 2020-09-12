@@ -8,6 +8,7 @@ from collections import deque
 from time import process_time
 from zipfile import BadZipFile
 
+import magic_man_diagnostics as diagnostics
 import magic_man_utils as utils
 from magic_man_player import Player
 

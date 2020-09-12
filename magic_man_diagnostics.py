@@ -33,6 +33,9 @@ def score_estim(width,bot_name):
     #the confidence depends then depends on the width entered
     alpha = 1 - stats.norm.cdf((width)*np.sqrt(len(bot_score))/std)
     
+    if np.isnan(mean):
+        mean,alpha = (-100,0.5)
+        
     return mean,alpha
     
 def conf_band_width(alpha,bot_name):
