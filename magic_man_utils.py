@@ -92,6 +92,26 @@ def save_init_score (bot_name,directory=cwd):
         return
     except Exception as exception:
         print("Saving the initial score failed: {}".format(exception))
+    
+
+def reset_score (bot_name,directory=cwd):
+    """
+    ______
+    Input:
+        bot name
+    ______
+    Output:
+        Overwrites the old score with empty score
+    ______
+    """
+    assert (os.path.exists(directory + r'\Bots\{}'.format(bot_name))),f"{bot_name} has no score file and cannot be reset"
+    try:
+        with open(directory + r'\Bots\{}\score.json'.format(bot_name),'w')as score_file:
+            json.dump({"SCORE":[]},score_file)
+        return
+    except Exception as exception:
+        print(f"Reseting {bot_name}'s score failed: {exception}")
+
 
 
 def save_init_progress(directory=cwd):
@@ -257,7 +277,7 @@ def add_score (bot_name,add_score,directory=cwd):
         return
             
     except Exception as exception:
-        print("Saving {botname}'s additional score failed: {}".format(exception))
+        print(f"Saving {bot_name}'s additional score failed: {exception}")
         
     
 def increment_in(nn_type,directory=cwd):

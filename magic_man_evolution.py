@@ -268,7 +268,7 @@ def mutation_step(bot_name,link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh
         None
         The bots genome is changed
     """
-    reset_score=False
+    reset_score_bool=False
     for net in ["stm","bid","play"]:
         thresh_list = [link_thresh,node_thresh,weights_mut_thresh]
         mutate_list = [ chance <= thresh_list[chance_idx] for chance_idx,chance in enumerate(np.random.uniform(size=3))]
@@ -293,10 +293,10 @@ def mutation_step(bot_name,link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh
             utils.save_bot_genome(bot_name,bot_genome)
 
         if sum(thresh_list)>0:
-            reset_score=True
+            reset_score_bool=True
             
-    if reset_score:
-        utils.save_init_score(bot_name)
+    if reset_score_bool:
+        utils.reset_score(bot_name)
             
 
 def mutate_species(species_names,link_thresh,node_thresh,weights_mut_thresh,rand_weight_thresh,pert_rate):
@@ -360,7 +360,8 @@ def produce_net_node_offspring(fit_node_genome,flop_node_genome):
     Output:
         offspring neural net node genome
     """
-    flop_excess_nodes = [node_gene for node_gene in flop_node_genome if node_gene not in fit_node_genome]
+    fit_node_indices = [node["INDEX"] for node in fit_node_genome]
+    flop_excess_nodes = [node_gene for node_gene in flop_node_genome if node_gene["INDEX"] not in fit_node_indices]
 
     offspring_node_genome = fit_node_genome + flop_excess_nodes
     offspring_node_genome.sort(key = lambda x : x["INDEX"])

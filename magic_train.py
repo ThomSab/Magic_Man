@@ -124,10 +124,10 @@ def use_multi_core(bots,width=10,alpha_thresh=0.1):
         score_estim_list = [(diagnostics.score_estim(width,bot.name),bot) for bot in bots]
         for significant_tuple in (significant_tuples := [tuple for tuple in score_estim_list if tuple[0][1] < alpha_thresh]):
             above_alpha.remove(significant_tuple[1])
-            print(f"{significant_tuple[1]}'s score is significant")
+        print(f"{len(significant_tuples)} out of {len(bots)} scores are significant")
 
         average_alpha = np.mean([tuple[0][1] for tuple in score_estim_list])
-        n_games = min([100,int(np.ceil((average_alpha-alpha_thresh)*50/average_alpha))])#a rough estimate, can be made more precise
+        n_games = min([100,int(np.ceil((average_alpha-alpha_thresh)*25/average_alpha)+5)])#a rough estimate, can be made more precise
         print( f"The pools score estimates have a {np.round(average_alpha*100,2)}% chance of being off by more than {width}")
 
         
@@ -140,7 +140,6 @@ def use_multi_core(bots,width=10,alpha_thresh=0.1):
                 pools[-1].extend([significant_tuple[1] for significant_tuple in significant_tuples[:missing_bots]])               
             pool_list.extend(pools)
 
-        print([len(pool) for pool in pool_list])
         
         with multiprocessing.Pool(n_cores) as p:
             print(f"All bots play {n_games} games")
@@ -184,6 +183,7 @@ def play_to_significance(bots,width=10,alpha_thresh=0.1,playing_method=use_singl
                 game_pool = above_alpha+bots[:4-len(above_alpha)]
                 print(above_bot,alpha)
 
+                print(f"Afterburning")
                 for game_idx in range(3):
                     play_game(game_pool)
                 
@@ -191,8 +191,6 @@ def play_to_significance(bots,width=10,alpha_thresh=0.1,playing_method=use_singl
                     for player in game_pool:
                         utils.add_score(player.name,player.game_score)
                         
-                    print(f"Afterburning")
-
           
 
     assert not (insignificant_scores := ([tuple[1] for tuple in diagnostics.bot_scores(width) if tuple[0][1] > alpha_thresh]))

@@ -55,7 +55,7 @@ the IIN depends on how many sensor nodes and output nodes a net has
 It is constant over all initial bots since they all start out minimal
 """    
 bid_iin  = [ ((N_bid_outputs) *N_bid_sensors)  ]
-`play_iin = [ ((N_play_outputs)*N_play_sensors) ]
+play_iin = [ ((N_play_outputs)*N_play_sensors) ]
 stm_iin  = [ ((N_stm_outputs) *N_stm_sensors)  ]
 
 
