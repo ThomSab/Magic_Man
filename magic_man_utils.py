@@ -5,6 +5,7 @@ import json
 import numpy as np
 from scipy.special import expit
 import os
+import sys
 import shutil
 
 
@@ -206,11 +207,17 @@ def load_bot_genome(bot_name,directory=cwd):
         with open(directory + r'\Bots\{}\genome.json'.format(bot_name),'r') as genome_file:
             return json.load(genome_file)
     except Exception as exception:
-        print(f"Loading {bot_name} Genome Failed: {exception}")
+        print(f"Loading {bot_name}'s Genome Failed: {exception}")
+        sys.exit(f"{bot_name}'s Genome file is inaccessable.")
 
 def load_bot_score(bot_name,directory=cwd):
-    with open(directory + r'\Bots\{}\score.json'.format(bot_name),'r') as score_file:
-        return json.load(score_file)["SCORE"]
+    try:
+        with open(directory + r'\Bots\{}\score.json'.format(bot_name),'r') as score_file:
+            return json.load(score_file)["SCORE"]
+    
+    except Exception as exception:#if the integrity of the botfile is compromised its important to know in which bot it is
+        print(f"Loading {bot_name}'s score failed: {exception}")
+        sys.exit(f"{bot_name}'s score file is inaccessable.")       
         
 def load_bot_names(directory=cwd):
     bot_dir = os.listdir(cwd +'\Bots')
@@ -250,7 +257,7 @@ def add_score (bot_name,add_score,directory=cwd):
         return
             
     except Exception as exception:
-        print("Saving additional score failed: {}".format(exception))
+        print("Saving {botname}'s additional score failed: {}".format(exception))
         
     
 def increment_in(nn_type,directory=cwd):

@@ -27,13 +27,15 @@ def score_estim(width,bot_name):
         
     """
     bot_score = utils.load_bot_score(bot_name)
+    n=len(bot_score)
     mean,std = np.mean(bot_score),np.std(bot_score)
+    
     
     #std deviation of the mean is the sample mean over the root of n
     #the confidence depends then depends on the width entered
-    alpha = 1 - stats.norm.cdf((width)*np.sqrt(len(bot_score))/std)
+    alpha = 1 - stats.norm.cdf((width)*np.sqrt(n)/std)
     
-    if np.isnan(mean):
+    if np.isnan(mean) or alpha==0 or n<=10:
         mean,alpha = (-100,0.5)
         
     return mean,alpha

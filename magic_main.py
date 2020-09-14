@@ -34,7 +34,6 @@ class Game:
     """
     def __init__(self,n_players,players,deck,true_trump=False):
 
-        
         self.deck = deck
         self.n_players = n_players
         if (n_players < 3) or (n_players > 6):

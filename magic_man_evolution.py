@@ -268,6 +268,7 @@ def mutation_step(bot_name,link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh
         None
         The bots genome is changed
     """
+    reset_score=False
     for net in ["stm","bid","play"]:
         thresh_list = [link_thresh,node_thresh,weights_mut_thresh]
         mutate_list = [ chance <= thresh_list[chance_idx] for chance_idx,chance in enumerate(np.random.uniform(size=3))]
@@ -291,6 +292,12 @@ def mutation_step(bot_name,link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh
     
             utils.save_bot_genome(bot_name,bot_genome)
 
+        if sum(thresh_list)>0:
+            reset_score=True
+            
+    if reset_score:
+        utils.save_init_score(bot_name)
+            
 
 def mutate_species(species_names,link_thresh,node_thresh,weights_mut_thresh,rand_weight_thresh,pert_rate):
     """

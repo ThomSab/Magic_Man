@@ -77,3 +77,10 @@ Statt den Index als Teil des Genoms zu definieren st. [{gene_idx:idx,gene_inform
 waere es schlauer das ganze genom als dictionary zu definieren st.{idx:{gene_information},idx:{gene_information},idx:{gene_information}}
 jetzt gerade ist das schon implementiert in der Player class aber koennte schoener und einfacher gemacht werden
 
+__________________________________________________________________________________________________
+[CHANGE] Multicore mapping: DONE
+Set all gamepools before playing so the multiprocessing is more consistent. Even though this might cause two bots to play at the same time.
+Their scores are not being mixed up by the algorithm! This is tested for good.
+Scores are only messy when the same bot is in one game twice.
+There are occations of score saving failiures because the score file is accessed simultaneusly by two processes but this is not dramatic.
+

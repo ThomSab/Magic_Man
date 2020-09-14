@@ -1,5 +1,6 @@
 import random
 import os
+import cProfile
 import shutil
 import sys
 import numpy as np
@@ -14,8 +15,9 @@ from magic_man_evolution import *
 number_of_players = 4
 
 def play_game(game_pool):
-    print(game_pool)
     game_pool_copy = game_pool.copy()
+    if len(game_pool_copy) != 4:
+        sys.exit(f"Bot pool faulty: {game_pool_copy}")
     try:
         game = Game(number_of_players,game_pool,deck.deck.copy()) #whos playing
     except TypeError:
@@ -43,7 +45,8 @@ def play_game(game_pool):
 
     for player in game_pool:
         utils.add_score(player.name,player.game_score)
-
+    print(game_pool)
+    
     return
 
 
@@ -97,12 +100,14 @@ def use_single_core(bot_names,width=10,alpha_thresh=0.1):
 
 
 
-def use_multi_core(bot_names,width=10,alpha_thresh=0.1):
+def use_multi_core(bots,width=10,alpha_thresh=0.1):
     """
     ______
     Input:
         significance interval
         significance value
+        loaded player instances of all bots
+
     ______
     Output:
         none
@@ -111,51 +116,51 @@ def use_multi_core(bot_names,width=10,alpha_thresh=0.1):
         a significance value of alpha or lower
     """
     n_cores = multiprocessing.cpu_count()
-    above_alpha = bot_names.copy()
-        
+    above_alpha = bots.copy()    
 
     while len(above_alpha)>=4:
 
-        score_estim_list = [(diagnostics.score_estim(width,bot_name),bot_name) for bot_name in above_alpha]
-        for significant_bot in (significant_scores := [tuple[1] for tuple in score_estim_list if tuple[0][1] < alpha_thresh]):
-            print(f"{above_alpha.pop(significant_bot)} score is significant")
+        above_alpha = bots.copy()
+        score_estim_list = [(diagnostics.score_estim(width,bot.name),bot) for bot in bots]
+        for significant_tuple in (significant_tuples := [tuple for tuple in score_estim_list if tuple[0][1] < alpha_thresh]):
+            above_alpha.remove(significant_tuple[1])
+            print(f"{significant_tuple[1]}'s score is significant")
 
-        average_alpha = np.mean([tuple[0][1] for tuple in score_estim_list if tuple[0][1] > alpha_thresh])
-        n_games = min([50,int(np.ceil((average_alpha-alpha_thresh)*25/average_alpha))])
-        
-
+        average_alpha = np.mean([tuple[0][1] for tuple in score_estim_list])
+        n_games = min([100,int(np.ceil((average_alpha-alpha_thresh)*50/average_alpha))])#a rough estimate, can be made more precise
         print( f"The pools score estimates have a {np.round(average_alpha*100,2)}% chance of being off by more than {width}")
 
-        above_alpha_copy = above_alpha.copy()
-            #let them play some games
-
+        
+        pool_list = []
+        
         for game_idx in range(n_games):
-        #this just so happens to be approximately appropriate
-        #the closer the alpha is the fewer games the bot has to play to significance
-        #this is a rough estimate and can be made more precise
-            print(f"{game_idx+1}/{n_games}")
-            random.shuffle(above_alpha_copy) #st every bot has a diverse set of enemies
-            pools = [above_alpha_copy[i:i + 4] for i in range(0, len(above_alpha_copy), 4)]
-            if len(pools[-1])<4:#if the last pool is not 4 players
-                pools = pools[:-1]
+            random.shuffle(above_alpha) #st every bot has a diverse set of enemies
+            pools = [above_alpha[i:i + 4] for i in range(0, len(above_alpha), 4)]
+            if (missing_bots := 4 - len(pools[-1])) > 0:#if the last pool is not 4 players
+                pools[-1].extend([significant_tuple[1] for significant_tuple in significant_tuples[:missing_bots]])               
+            pool_list.extend(pools)
 
-            with multiprocessing.Pool(n_cores) as p:
-                p.map(play_game,pools)
+        print([len(pool) for pool in pool_list])
+        
+        with multiprocessing.Pool(n_cores) as p:
+            print(f"All bots play {n_games} games")
+            p.map(play_game,pool_list)
 
 
             
 
-    return 
+    return above_alpha
                 
 
 
-def play_to_significance(bot_names,width=10,alpha_thresh=0.1,playing_method=use_single_core):
+def play_to_significance(bots,width=10,alpha_thresh=0.1,playing_method=use_single_core):
     """
     ______
     Input:
         significance interval
         significance value
         method of training
+        loaded player instances of all bots
     ______
     Output:
         none
@@ -164,12 +169,8 @@ def play_to_significance(bot_names,width=10,alpha_thresh=0.1,playing_method=use_
         a significance value of alpha or lower
         
     """
-
-    score_estim_list = [(diagnostics.score_estim(width,bot_name),bot_name) for bot_name in bot_names]
-    for significant_bot in (significant_scores := [tuple[1] for tuple in score_estim_list if tuple[0][1] < alpha_thresh]):
-        bot_names.remove(significant_bot)
     
-    playing_method(bot_names,width,alpha_thresh)
+    above_alpha = playing_method(bots,width,alpha_thresh)
                 
 
     #The last three bots play with bots that are already significant
@@ -180,7 +181,7 @@ def play_to_significance(bot_names,width=10,alpha_thresh=0.1,playing_method=use_
             if alpha<=alpha_thresh:
                 above_alpha.remove(above_bot)
             else:
-                game_pool = above_alpha+bot_names[:4-len(above_alpha)]
+                game_pool = above_alpha+bots[:4-len(above_alpha)]
                 print(above_bot,alpha)
 
                 for game_idx in range(3):
@@ -190,7 +191,7 @@ def play_to_significance(bot_names,width=10,alpha_thresh=0.1,playing_method=use_
                     for player in game_pool:
                         utils.add_score(player.name,player.game_score)
                         
-                    print(f"Afterburn",game_pool)
+                    print(f"Afterburning")
 
           
 
@@ -316,14 +317,14 @@ def generation(gen_idx,
 
 
 def start_training(significance_width=10,
-                   significance_val=0.05,
+                   significance_val=0.1,
                    population_size=100,
                    link_thresh=0.05,
                    node_thresh= 0.03,
                    weights_mut_thresh=0.8,
                    rand_weight_thresh=0.1,
                    pert_rate=0.1,
-                   preservation_rate = 0.4,
+                   preservation_rate = 0.5,
                    playing_method=use_multi_core):
     
     current_gen = utils.current_gen()
@@ -342,10 +343,9 @@ if __name__ == "__main__": #so it doesnt run when imported
     print(txt)
 
     #bots = [Player(bot_name) for bot_name in utils.load_bot_names()[:4]]
-
+    print(f"{multiprocessing.cpu_count()} cores available.")
     diagnostics.population_progress()
     start_training(significance_val=0.1,significance_width=5,pert_rate=0.5)
-    
     
 """
 The profiler estimates a game to take ~6.7 sec
