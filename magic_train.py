@@ -3,6 +3,7 @@ import os
 import cProfile
 import shutil
 import sys
+import time
 import numpy as np
 import multiprocessing
 
@@ -44,7 +45,7 @@ def play_game(game_pool):
     """                                                           
 
     for player in game_pool:
-        utils.add_score(player.name,player.game_score)
+        utils.add_seperate_score(player.name,player.game_score)
     print(game_pool)
     
     return
@@ -99,6 +100,49 @@ def use_single_core(bot_names,width=10,alpha_thresh=0.1):
     return
 
 
+def scrape_pool(n_cores,above_alpha):
+    """
+    ______
+    Input:
+        number of available cores
+        all bots still playing
+    ______
+    Output:
+        time taken to scrape all scores
+    ______
+        all bots have their seperate scores combined into one main score file
+    """     
+    start_time = time.time()
+    with multiprocessing.Pool(n_cores) as p:
+        p.map(utils.scrape_scores,above_alpha)
+    scrape_time = time.time()-start_time
+    print(f"scraped {len(above_alpha)} scores in {scrape_time}")       
+
+    return scrape_time
+
+
+
+def play_pool (n_cores,pool_list):
+    """
+    ______
+    Input:
+        number of available cores
+        list of all game pools
+    ______
+    Output:
+        time taken to play all games
+    ______
+        every pool in pool list plays one game
+    """ 
+    start_time = time.time()
+    with multiprocessing.Pool(n_cores) as p:    
+        p.map(play_game,pool_list)
+    play_time=time.time()-start_time
+    print(f"{n_games} played in {play_time}")
+
+    return play_time
+
+
 
 def use_multi_core(bots,width=10,alpha_thresh=0.1):
     """
@@ -119,7 +163,7 @@ def use_multi_core(bots,width=10,alpha_thresh=0.1):
     above_alpha = bots.copy()    
 
     while len(above_alpha)>=4:
-
+        
         above_alpha = bots.copy()
         score_estim_list = [(diagnostics.score_estim(width,bot.name),bot) for bot in bots]
         for significant_tuple in (significant_tuples := [tuple for tuple in score_estim_list if tuple[0][1] < alpha_thresh]):
@@ -140,14 +184,12 @@ def use_multi_core(bots,width=10,alpha_thresh=0.1):
                 pools[-1].extend([significant_tuple[1] for significant_tuple in significant_tuples[:missing_bots]])               
             pool_list.extend(pools)
 
-        
-        with multiprocessing.Pool(n_cores) as p:
-            print(f"All bots play {n_games} games")
-            p.map(play_game,pool_list)
-
-
-            
-
+        print(f"All bots play {n_games} games")
+        game_time = play_pool(n_cores,pool_list)
+        print(f"Scraping {len(above_alpha)} Scores")
+        scrape_time = scrape_pool(n_cores,above_alpha)
+        utils.save_time_performance(gen_idx=utils.current_gen(),n_games=n_games,pool_size=len(above_alpha),game_time=game_time,scrape_time=scrape_time,n_cores=n_cores)
+    
     return above_alpha
                 
 
@@ -344,6 +386,8 @@ if __name__ == "__main__": #so it doesnt run when imported
     print(f"{multiprocessing.cpu_count()} cores available.")
     diagnostics.population_progress()
     start_training(significance_val=0.1,significance_width=5,pert_rate=0.5)
+
+
     
 """
 The profiler estimates a game to take ~6.7 sec

@@ -7,6 +7,7 @@ from scipy.special import expit
 import os
 import sys
 import shutil
+import time
 
 
 
@@ -80,7 +81,7 @@ def save_init_score (bot_name,directory=cwd):
     ______
     Output:
         Saves the initial score for a bot.
-        This is usualy zero
+        This is a dictionary containing an empty list
     ______
         The score is kept as a list
     """
@@ -111,7 +112,16 @@ def reset_score (bot_name,directory=cwd):
         return
     except Exception as exception:
         print(f"Reseting {bot_name}'s score failed: {exception}")
+        
 
+def save_init_time_performance(directory=cwd):
+    try:
+        with open(directory + r'\Bots\time_perform.json','x')as progress_file: #open mode 'x' creates a file and fails if it already exists
+            json.dump([{"GEN":0,"NGAMES":0,"POOLSIZE":0,"GAMETIME":0,"SCRAPETIME":0,"NCORES":0}],progress_file)#initial progress is saved as the first entry of a list
+        return
+    except Exception as exception:
+        print("Saving the initial time performance failed: {}".format(exception))   
+    
 
 
 def save_init_progress(directory=cwd):
@@ -148,6 +158,24 @@ def save_init_innovation(nn_type,init_innovation,directory=cwd):
         return
     except Exception as exception:
         print("Saving the initial innovation number failed: {}".format(exception))
+
+
+def save_time_performance(gen_idx,n_games,pool_size,game_time,scrape_time,n_cores,directory=cwd):
+    try:
+        with open(directory + r'\Bots\time_perform.json','r')as time_perform_file: #open mode 'r' read 
+            time_perform_obj = json.load(time_perform_file)
+            time_perform_file.close()
+        
+        time_perform_obj.append({"GEN":gen_idx,"NGAMES":n_games,"POOLSIZE":pool_size,"GAMETIME":game_time,"SCRAPETIME":scrape_time,"NCORES":n_cores})
+        
+        with open(directory + r'\Bots\time_perform.json','w') as time_perform_file:
+            json.dump(time_perform_obj,time_perform_file)
+            print(f"Time performance saved")
+            
+    except Exception as exception:
+        print("Saving time performance failed: {}".format(exception)) 
+
+        
 
 def save_generation_species(gen_idx,species_dict,directory=cwd):
 
@@ -241,7 +269,7 @@ def load_bot_score(bot_name,directory=cwd):
         
 def load_bot_names(directory=cwd):
     bot_dir = os.listdir(cwd +'\Bots')
-    return [bot_name for bot_name in bot_dir if bot_name not in ['bid_innovation.json','play_innovation.json','stm_innovation.json','species.json','progress.json']]
+    return [bot_name for bot_name in bot_dir if bot_name not in ['bid_innovation.json','play_innovation.json','stm_innovation.json','species.json','progress.json','time_perform.json']]
 
 def load_empty_bot_names(gen_idx,directory=cwd):
     with open(directory + r'\names.json','r') as name_file:
@@ -279,7 +307,66 @@ def add_score (bot_name,add_score,directory=cwd):
     except Exception as exception:
         print(f"Saving {bot_name}'s additional score failed: {exception}")
         
+   
+def add_seperate_score(bot_name,add_score,directory=cwd):
+    """
+    ______
+    Input:
+        bot name,score_to add
+    ______
+    Output:
+        Saves an additional seperate score for a bot.
+    ______
+        The score is kept as a list
+    """
+    if not os.path.exists(directory + r'\Bots\{}'.format(bot_name)):
+        os.mkdir(directory + r'\Bots\{}'.format(bot_name))
+    try:
+        filename=("SCORE_"+str(time.time())).replace('.','')
+        with open(directory + r'\Bots\{}\{}.json'.format(bot_name,filename),'x') as score_file: #open mode 'x' creates a file and fails if it already exists
+            json.dump({"SCORE":[add_score]},score_file)#seperate score is saved in a dict
+        return
+    except Exception as exception:
+        print("Saving the additional seperate score failed: {}".format(exception))  
+
+
+def scrape_scores(bot_name,directory=cwd):
+    """
+    ______
+    Input:
+        bot name
+    ______
+    Output:
+        Saves all the seperate score for a bot in the single score file
+    ______
+        list the directory score files
+        add them all to the score one after another so the score file does not break
+        
+        
+        !!dont forget to check the profiler this might cost too much time!!
+    """
+    print(f"Scraping {bot_name}'s scores")
     
+    bot_dir = os.listdir(cwd + f'\Bots\{bot_name}')
+    score_files = [scorefile for scorefile in bot_dir if "SCORE_" in scorefile]
+    
+    try:
+        bot_scores=[]
+        for score_file_name in score_files:
+            with open(directory + f'\Bots\{bot_name}\{score_file_name}','r') as score_file:
+                bot_scores.append(json.load(score_file)["SCORE"][0])
+            os.remove(directory + f'\Bots\{bot_name}\{score_file_name}')  
+            
+        for score in bot_scores:
+            add_score(bot_name,score)
+        
+    except Exception as exception:#if the integrity of the botfile is compromised its important to know in which bot it is
+        print(f"Scraping{bot_name}'s score failed: {exception}")
+        sys.exit(f"{bot_name}'s score file is inaccessable.") 
+    
+    pass
+    
+   
 def increment_in(nn_type,directory=cwd):
     """
     ______
@@ -303,7 +390,6 @@ def increment_in(nn_type,directory=cwd):
     
             
     
-
 
 
 def bot_compatibility_distance(genome_A,genome_B,c_1,c_2,c_3):
