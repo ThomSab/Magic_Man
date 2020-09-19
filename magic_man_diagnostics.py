@@ -1,4 +1,5 @@
 import os
+import json
 import numpy as np
 import scipy.stats as stats
 import matplotlib.pyplot as plt
@@ -174,18 +175,39 @@ def graph(bot_name,net_type):
     plt.show()
     
 
-def species_ot():
+def species_over_time(pop_size):
     """
     ______
     Input:
-        species_dict
+       list of species_dict
     ______
     Output:
         Graph showing the species composition of the population
         over the generations
     """ 
+    
+    with open(utils.cwd + r'\Bots\species.json','r') as species_file: #best practice would be to have a utils function load the species_dict_list but yeah
+        species_dict_list = json.load(species_file)
+        species_file.close()
+    
+    gens=[int(gen_idx.split('_')[-1]) for gen_idx,species_dict in species_dict_list.items()]
+    species_sizes=[[0 for _ in gens] for _ in range(pop_size)] #at most 25 species for now
+    
+    for gen_idx,species_dict in species_dict_list.items():
+        for species_idx,species in species_dict.items():
+            species_sizes[int(species_idx)][int(gen_idx.split('_')[-1])] = len(species["MEMBERS"])
 
-    pass
+    lower=[0 for _ in gens]
+    for series_idx,series in enumerate(species_sizes[:-1]):
+        upper = [species_sizes[series_idx][idx] + lower[idx] for idx in gens]
+        plt.plot(gens,upper,color='k',alpha=0.1)
+        plt.fill_between(gens,lower,upper,alpha=0.1)
+        lower=upper
+
+    plt.xlabel("Generation")
+    plt.ylabel("Population")   
+    plt.show()
+
 
 
 def population_progress():

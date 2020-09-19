@@ -33,7 +33,8 @@ def species_represent(last_gen_species=None):
         for last_gen_species_idx,species in last_gen_species.items():#the species index remains the same but the representative is changed
             new_representative_name = random.choice(species["MEMBERS"])
             current_gen_species[last_gen_species_idx]["REPRESENTATIVE"] = new_representative_name
-            current_gen_species[last_gen_species_idx]["MEMBERS"]        = [new_representative_name]
+            current_gen_species[last_gen_species_idx]["MEMBERS"]        = []#the representative will be added automatically. 
+            #(In theory it is possible that the representative of a species is appended to another species, but that is a problem for another day.)
             return current_gen_species
     else:
         print("No seperate Species declared...\n")
@@ -44,7 +45,7 @@ def species_represent(last_gen_species=None):
 
 
 
-def speciation (bots,c1=1,c2=1,c3=0.4,compat_thresh=3,species_dict = {}):
+def speciation (bots,c1=2,c2=2,c3=0.7,compat_thresh=2.0,species_dict = {}):
     """
     ______
     Input:
@@ -71,8 +72,9 @@ def speciation (bots,c1=1,c2=1,c3=0.4,compat_thresh=3,species_dict = {}):
         if utils.compatibility_search(bot,c1,c2,c3,compat_thresh,species_dict):#comp_search assigns the species to the bot but not the bot to the species dict
             species_dict[bot.species]["MEMBERS"].append(bot.name)# from object to name
         else:
-            bot.species = str(len(species_dict+1))
-            species_dict[str(len(species_dict+1))] = {"REPRESENTATIVE":bot.name,"MEMBERS":[bot.name]} #new representative
+            print("new_species")
+            bot.species = str(len(species_dict)+1) #new species index
+            species_dict[str(len(species_dict)+1)] = {"REPRESENTATIVE":bot.name,"MEMBERS":[bot.name]} #new species with bot as representative
 
     return species_dict
    
@@ -96,7 +98,7 @@ def fitness (bots,species = {}):
     for bot in bots:
         bot_score,alpha = diagnostics.score_estim(2,bot.name) #2 is the width of the confidence band around the estim
         assert alpha < 0.5, "The score estimate for {} is insignificant at a level of {}".format(bot.name,alpha) #check whether the estimate is reliable
-        bot.fitness = bot_score / len(species[bot.species]["MEMBERS"]) #fitness fn as defined in the paper 
+        bot.fitness = 200+ bot_score / len(species[bot.species]["MEMBERS"]) #fitness fn as defined in the paper plus 400 st. fitness is not negative
 
 
 def species_allocation(bots,species_dict,pop_size):
@@ -120,8 +122,13 @@ def species_allocation(bots,species_dict,pop_size):
     for species_idx,species in species_dict.items():
         species_fitness_sum = sum([bot.fitness for bot in bots if bot.species == species_idx])
         
-        species_sizes[species_idx] = int(np.round(pop_size * (species_fitness_sum/pop_fitness_sum)))
+        species_sizes[species_idx] = int(np.floor(pop_size * (species_fitness_sum/pop_fitness_sum)))
     
+    while sum([species_size for species_idx,species_size in species_sizes.items()]) > pop_size: #population is oversize
+        rs_idx,rs_size = random.choice(list(species_sizes.items()))
+        if rs_size >= 5:
+            species_sizes[rs_idx] -= 1 #random species gets one smaller 
+
     
     return species_sizes
 

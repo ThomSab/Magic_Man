@@ -238,6 +238,9 @@ def save_bot_genome(bot_name,genome,directory=cwd):
             print("Saving {} genome failed: {}".format(bot_name,exception))
 
 def load_gen_species(gen_idx,assign_species=False,bots=None,directory = cwd):
+    """
+    Can assign species to Bots!
+    """
     with open(directory + r'\Bots\species.json','r') as species_file:
         species_obj = json.load(species_file)
         species_file.close()
@@ -498,7 +501,9 @@ def compatibility_search(bot,c1,c2,c3,compat_thresh,species_dict = {}):
         Assigns the species to the bot
     """    
     for species_idx,species in species_dict.items():
-        if bot_compatibility_distance(load_bot_genome(bot),load_bot_genome(species_dict[species_idx]["REPRESENTATIVE"]),c1,c2,c3) < compat_thresh:
+        bcd = bot_compatibility_distance(load_bot_genome(bot),load_bot_genome(species_dict[species_idx]["REPRESENTATIVE"]),c1,c2,c3)
+        print('bcd',bcd,'bot',bot,'species representative',species["REPRESENTATIVE"])
+        if  bcd < compat_thresh:
             bot.species = species_idx
             return bot.species
     return False
@@ -585,10 +590,19 @@ def current_gen(directory=cwd):
         species_file.close()
     
     return max([int(gen_idx[-1]) for gen_idx,species_dict in species_obj.items()])   
-        
-        
-        
-        
+    
+    
+def check_for_species_dict(current_gen_idx):
+    try:
+        gen_species_dict = load_gen_species(current_gen_idx)
+        for species_idx,species in gen_species_dict.items():
+            scores=[load_bot_score(botname) for botname in species["MEMBERS"]] #fails if the bots in the dictionary are not in the pool anymore
+
+    except SystemExit:
+        print("ERROR: No intact Species dictionary for last generation.")
+        return False
+     
+    return True    
         
         
         

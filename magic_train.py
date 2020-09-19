@@ -138,7 +138,7 @@ def play_pool (n_cores,pool_list):
     with multiprocessing.Pool(n_cores) as p:    
         p.map(play_game,pool_list)
     play_time=time.time()-start_time
-    print(f"{n_games} played in {play_time}")
+    print(f"Played in {play_time}")
 
     return play_time
 
@@ -162,7 +162,7 @@ def use_multi_core(bots,width=10,alpha_thresh=0.1):
     n_cores = multiprocessing.cpu_count()
     above_alpha = bots.copy()    
 
-    while len(above_alpha)>=4:
+    while len(above_alpha):
         
         above_alpha = bots.copy()
         score_estim_list = [(diagnostics.score_estim(width,bot.name),bot) for bot in bots]
@@ -170,8 +170,11 @@ def use_multi_core(bots,width=10,alpha_thresh=0.1):
             above_alpha.remove(significant_tuple[1])
         print(f"{len(significant_tuples)} out of {len(bots)} scores are significant")
 
+        if not above_alpha:
+            return above_alpha
+        
         average_alpha = np.mean([tuple[0][1] for tuple in score_estim_list])
-        n_games = min([100,int(np.ceil((average_alpha-alpha_thresh)*25/average_alpha)+5)])#a rough estimate, can be made more precise
+        n_games = min([100,int(np.ceil((average_alpha-alpha_thresh)*25/average_alpha)+10)])#a rough estimate, can be made more precise
         print( f"The pools score estimates have a {np.round(average_alpha*100,2)}% chance of being off by more than {width}")
 
         
@@ -179,6 +182,7 @@ def use_multi_core(bots,width=10,alpha_thresh=0.1):
         
         for game_idx in range(n_games):
             random.shuffle(above_alpha) #st every bot has a diverse set of enemies
+            random.shuffle(significant_tuples) #st excess score is distributed more evenly
             pools = [above_alpha[i:i + 4] for i in range(0, len(above_alpha), 4)]
             if (missing_bots := 4 - len(pools[-1])) > 0:#if the last pool is not 4 players
                 pools[-1].extend([significant_tuple[1] for significant_tuple in significant_tuples[:missing_bots]])               
@@ -224,19 +228,18 @@ def play_to_significance(bots,width=10,alpha_thresh=0.1,playing_method=use_singl
             else:
                 game_pool = above_alpha+bots[:4-len(above_alpha)]
                 print(above_bot,alpha)
-
+                
                 print(f"Afterburning")
-                for game_idx in range(3):
+                for game_idx in range(5):
                     play_game(game_pool)
                 
                     #show how the score behaves over those games
                     for player in game_pool:
                         utils.add_score(player.name,player.game_score)
                         
-          
-
-    assert not (insignificant_scores := ([tuple[1] for tuple in diagnostics.bot_scores(width) if tuple[0][1] > alpha_thresh]))
     
+    assert not (insignificant_scores := ([tuple[1] for tuple in diagnostics.bot_scores(width) if tuple[0][1] > alpha_thresh])),f"{insignificant_scores} are left over!"
+    scrape_pool(multiprocessing.cpu_count(),bots)#scrape leftover scores
     
     print("Significance achieved")
     return True
@@ -286,7 +289,7 @@ def progressive_step(gen_idx,bots,population_size,link_thresh,node_thresh,weight
         
         
     """
-    species_dict = utils.load_gen_species(gen_idx-1,assign_species = True, bots = bots)
+    species_dict = utils.load_gen_species(gen_idx-1,assign_species = True, bots = bots)#if there is a dictionary
     fitness(bots = bots,species = species_dict)
     species_sizes=species_allocation(bots=bots,species_dict=species_dict,pop_size=population_size)
     
@@ -308,7 +311,6 @@ def progressive_step(gen_idx,bots,population_size,link_thresh,node_thresh,weight
     utils.save_generation_species(gen_idx,new_species_dict)#save species under gen idx
     
     return
-
 
 
 def generation(gen_idx,
@@ -368,6 +370,11 @@ def start_training(significance_width=10,
                    playing_method=use_multi_core):
     
     current_gen = utils.current_gen()
+
+    if not utils.check_for_species_dict(current_gen):
+        new_species_representatives = species_represent()#empty representative species
+        new_species_dict = speciation(bots=[Player(bot) for bot in utils.load_bot_names()],species_dict = new_species_representatives)
+        utils.save_generation_species(current_gen,new_species_dict)
         
     while True:
         current_gen +=1
@@ -385,8 +392,10 @@ if __name__ == "__main__": #so it doesnt run when imported
     #bots = [Player(bot_name) for bot_name in utils.load_bot_names()[:4]]
     print(f"{multiprocessing.cpu_count()} cores available.")
     diagnostics.population_progress()
+    diagnostics.species_over_time(pop_size=100)
     start_training(significance_val=0.1,significance_width=5,pert_rate=0.5)
 
+    
 
     
 """
