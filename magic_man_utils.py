@@ -160,6 +160,11 @@ def save_init_innovation(nn_type,init_innovation,directory=cwd):
         print("Saving the initial innovation number failed: {}".format(exception))
 
 
+def init_representative_dir(directory=cwd):
+    if not os.path.exists(directory + r'\Bots\Species_Representatives'):
+        os.mkdir(directory + r'\Bots\Species_Representatives')
+    return
+
 def save_time_performance(gen_idx,n_games,pool_size,game_time,scrape_time,n_cores,directory=cwd):
     try:
         with open(directory + r'\Bots\time_perform.json','r')as time_perform_file: #open mode 'r' read 
@@ -173,9 +178,7 @@ def save_time_performance(gen_idx,n_games,pool_size,game_time,scrape_time,n_core
             print(f"Time performance saved")
             
     except Exception as exception:
-        print("Saving time performance failed: {}".format(exception)) 
-
-        
+        print("Saving time performance failed: {}".format(exception))       
 
 def save_generation_species(gen_idx,species_dict,directory=cwd):
 
@@ -237,6 +240,11 @@ def save_bot_genome(bot_name,genome,directory=cwd):
         except Exception as exception:
             print("Saving {} genome failed: {}".format(bot_name,exception))
 
+
+def save_representative(bot_name,directory=cwd):
+    shutil.copytree(directory + f'\Bots\{bot_name}',directory + f'\Bots\Species_Representatives\{bot_name}')   
+    return
+
 def load_gen_species(gen_idx,assign_species=False,bots=None,directory = cwd):
     """
     Can assign species to Bots!
@@ -253,9 +261,9 @@ def load_gen_species(gen_idx,assign_species=False,bots=None,directory = cwd):
     
     return species_obj[("GEN_"+str(gen_idx))]
 
-def load_bot_genome(bot_name,directory=cwd):
+def load_bot_genome(bot_name,directory= (cwd+r'\Bots' )):
     try:
-        with open(directory + r'\Bots\{}\genome.json'.format(bot_name),'r') as genome_file:
+        with open(directory + '\{}\genome.json'.format(bot_name),'r') as genome_file:
             return json.load(genome_file)
     except Exception as exception:
         print(f"Loading {bot_name}'s Genome Failed: {exception}")
@@ -270,9 +278,9 @@ def load_bot_score(bot_name,directory=cwd):
         print(f"Loading {bot_name}'s score failed: {exception}")
         sys.exit(f"{bot_name}'s score file is inaccessable.")       
         
-def load_bot_names(directory=cwd):
-    bot_dir = os.listdir(cwd +'\Bots')
-    return [bot_name for bot_name in bot_dir if bot_name not in ['bid_innovation.json','play_innovation.json','stm_innovation.json','species.json','progress.json','time_perform.json']]
+def load_bot_names(directory=(cwd + r'\Bots')):
+    bot_dir = os.listdir(directory)
+    return [bot_name for bot_name in bot_dir if bot_name not in ['Species_Representatives','bid_innovation.json','play_innovation.json','stm_innovation.json','species.json','progress.json','time_perform.json']]
 
 def load_empty_bot_names(gen_idx,directory=cwd):
     with open(directory + r'\names.json','r') as name_file:
@@ -501,8 +509,9 @@ def compatibility_search(bot,c1,c2,c3,compat_thresh,species_dict = {}):
         Assigns the species to the bot
     """    
     for species_idx,species in species_dict.items():
-        bcd = bot_compatibility_distance(load_bot_genome(bot),load_bot_genome(species_dict[species_idx]["REPRESENTATIVE"]),c1,c2,c3)
-        print('bcd',bcd,'bot',bot,'species representative',species["REPRESENTATIVE"])
+        representative_name=species_dict[species_idx]["REPRESENTATIVE"]
+        bcd = bot_compatibility_distance(load_bot_genome(bot),load_bot_genome(representative_name,directory = (cwd + r'\Bots\Species_Representatives')),c1,c2,c3)
+        print(f'Bot {bot} has a compatibility distance of {np.round(bcd,3)} to the species represented by {representative_name}')
         if  bcd < compat_thresh:
             bot.species = species_idx
             return bot.species
@@ -558,7 +567,7 @@ def check_for_connection_duplication(bot_connection_genome,connection_gene):
     return False
     
     
-def incinerate(bot_name,directory=cwd):
+def incinerate(bot_name,directory=cwd+'\Bots'):
     """
     ______
     Input:
@@ -572,7 +581,7 @@ def incinerate(bot_name,directory=cwd):
     """   
     
     try:
-        shutil.rmtree(directory + f'\Bots\{bot_name}')
+        shutil.rmtree(directory + f'\{bot_name}')
         print(f"Incinerated {bot_name}.")
     except Exception as exception:
         print(f"Incinerating {bot_name} failed: {exception}") 

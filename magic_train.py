@@ -237,13 +237,28 @@ def play_to_significance(bots,width=10,alpha_thresh=0.1,playing_method=use_singl
                     for player in game_pool:
                         utils.add_score(player.name,player.game_score)
                         
-    
-    assert not (insignificant_scores := ([tuple[1] for tuple in diagnostics.bot_scores(width) if tuple[0][1] > alpha_thresh])),f"{insignificant_scores} are left over!"
     scrape_pool(multiprocessing.cpu_count(),bots)#scrape leftover scores
+    
+    if [tuple[1] for tuple in diagnostics.bot_scores(width) if tuple[0][1] > alpha_thresh]:
+        play_to_significance(bots,width=width,alpha_thresh=alpha_thresh,playing_method=playing_method)
+        
+    assert not (insignificant_scores := ([tuple[1] for tuple in diagnostics.bot_scores(width) if tuple[0][1] > alpha_thresh])),f"{insignificant_scores} are left over!"
+    
     
     print("Significance achieved")
     return True
 
+
+def incinerate_redundant_representatives(new_species_representatives):
+    #kill off unnecessary representatives
+    #this should be seperate function
+    for bot in os.listdir(utils.cwd + r'\Bots\Species_Representatives'):
+        present = False
+        for species_idx,species in new_species_representatives.items():        
+            if species["REPRESENTATIVE"] == bot:
+                present=True
+        if not present:
+            utils.incinerate(bot,directory=utils.cwd+r'\Bots\Species_Representatives')    
 
 
 def inquiry_step(gen_idx,bots,significance_width,significance_val,playing_method):
@@ -296,20 +311,28 @@ def progressive_step(gen_idx,bots,population_size,link_thresh,node_thresh,weight
     print("Spezies Sizes Dict: ", species_sizes)
 
     names = utils.load_empty_bot_names(gen_idx)      
-    name_idx = 0      
+    name_idx = 0
+    kill_list = []
     for species_idx,species in species_dict.items():
-        species["MEMBERS"] = reproduce(bots,species["MEMBERS"],names[name_idx:len(species["MEMBERS"])],species_sizes[species_idx],preservation_rate) #from name to name
+        species["MEMBERS"],species_kill_list = reproduce(bots,species["MEMBERS"],names[name_idx:],species_sizes[species_idx],preservation_rate) #from name to name
         name_idx+=len(species["MEMBERS"])
+        kill_list.extend(species_kill_list)
 
         mutate_species(species["MEMBERS"],link_thresh,node_thresh,weights_mut_thresh,rand_weight_thresh,pert_rate)
 
-            
-    bots = [Player(bot_name) for bot_name in utils.load_bot_names()] #load the new generation
+    bots = [Player(bot_name) for bot_name in utils.load_bot_names() if bot_name not in kill_list] #load the new generation
 
     new_species_representatives = species_represent(species_dict)
-    new_species_dict = speciation(bots=bots,species_dict = new_species_representatives)
-    utils.save_generation_species(gen_idx,new_species_dict)#save species under gen idx
+    incinerate_redundant_representatives(new_species_representatives)
+
+    assert len(bots)==pop_size, "Too many bots!!"
     
+    new_species_dict = speciation(bots=bots,population_size=pop_size,species_dict = new_species_representatives)
+    utils.save_generation_species(gen_idx,new_species_dict)#save species under gen idx
+
+    for bot in kill_list:
+        utils.incinerate(bot)
+
     return
 
 
@@ -372,12 +395,15 @@ def start_training(significance_width=10,
     current_gen = utils.current_gen()
 
     if not utils.check_for_species_dict(current_gen):
+        current_gen+=1 #bc the utils function fetches the generation from the existing species dictionaries
         new_species_representatives = species_represent()#empty representative species
         new_species_dict = speciation(bots=[Player(bot) for bot in utils.load_bot_names()],species_dict = new_species_representatives)
         utils.save_generation_species(current_gen,new_species_dict)
-        
+
+
     while True:
         current_gen +=1
+        print(f"Training generation {current_gen-1} to produce generation {current_gen}")
         generation(current_gen,
                    significance_width,significance_val,population_size,
                    link_thresh,node_thresh,weights_mut_thresh,rand_weight_thresh,pert_rate,preservation_rate,playing_method)
@@ -393,7 +419,7 @@ if __name__ == "__main__": #so it doesnt run when imported
     print(f"{multiprocessing.cpu_count()} cores available.")
     diagnostics.population_progress()
     diagnostics.species_over_time(pop_size=100)
-    start_training(significance_val=0.1,significance_width=5,pert_rate=0.5)
+    start_training(significance_val=0.49,significance_width=20,pert_rate=0.3)
 
     
 

@@ -5,10 +5,12 @@ import random
 from collections import deque
 from operator import itemgetter,attrgetter
 
-import magic_man_deck as deck
-from magic_man_player import Player
-from magic_train import load_pool
 from magic_man import txt
+import magic_man_deck  as deck
+import magic_man_utils as utils
+import magic_man_diagnostics as diagnostics
+from magic_man_player  import Player
+
 number_of_players = 4
 clear = lambda: os.system('cls')
 
@@ -97,7 +99,7 @@ class Human_Player:
         return played_card
 
 class Game:
-    def __init__(self,n_players,players,deck):
+    def __init__(self,n_players,players,deck,true_trump=False):
         self.deck = deck
         self.n_players = n_players
         if (n_players < 3) or (n_players > 6):
@@ -106,6 +108,7 @@ class Game:
         self.max_rounds = int(60/n_players)
         self.current_round = 1
         self.bids = []
+        self.true_trump = true_trump
         self.trump = 6 #initial value only --> the trump indices only go up to 5
 		
         random.shuffle(self.players)
@@ -128,40 +131,39 @@ class Game:
             if isinstance(player,Player):
                 #____________________________________________________
                 #progress estimations
-                player.info_progress                     = np.array([[0] for i in range(160)],dtype = float)
-                player.info_progress[0:(len(self.bids))] = [[bid[0] - (len(player.cards)/4)] for bid in self.bids] #how high all the players bid minus the average expected amount of suits they win
-                player.info_progress[4:19]               = [[1] if _ == len(player.cards) else [0] for _ in range(self.max_rounds)]               #how many cards there are in his hand
-                player.info_progress[19:23]              = [[1] if _ == self.players.index(player) else [0] for _ in range(number_of_players)]    #what place in the players the player has
-                player.info_progress[23:29]				 = [[1] if _ == self.trump else [0] for _ in range(6)]        						     #which color is currently trump
-                player.info_progress[29:30]				 = [player.round_score - player.current_bid]
-                player.info_progress[30:40]              = player.current_progress
-                
-                    
-                player.info_progress   [40:(40+60)]           = [ [1] if card in turn_cards   else [0] for card in deck.deck]
-                player.info_progress   [(40+60):(40+60+60)]   = [ [1] if card in player.cards else [0] for card in deck.deck] 
+                player.stm_net.list_input(0,[bid[0] - (len(player.cards)/4) for bid in self.bids]) #how high all the players bid, minus the average expected amount of suits they win            
+                player.stm_net.list_input(4,[1 if _ == len(player.cards) else 0 for _ in range(self.max_rounds)])   #how many cards there are in his hand
+                player.stm_net.list_input(19,[1 if _ == self.players.index(player) else 0 for _ in range(number_of_players)])   #what place in the players order the player has
+                player.stm_net.list_input(23,[1 if _ == self.trump else 0 for _ in range(6)])   #which color is currently trump
 
-                player.progress()
+                player.stm_net.list_input(29,[player.round_score - player.current_bid]) #how many suits the player has-how many he bid (if neg then he has too many
+                player.stm_net.list_input(30,player.current_stm)    #current short term memory information block
                     
+                player.stm_net.list_input(40,[ 1 if card in turn_cards   else 0 for card in deck.deck]) #which cards have been played
+                player.stm_net.list_input((40+60),[ 1 if card in player.cards else 0 for card in deck.deck])#cards in hand
+
+                player.stm()
+                
                 #print('progress {} is '.format(player),player.current_progress[0][0], '\n')
 
                 #____________________________________________________
                 #card playing
-                player.info_cards                     = np.array([[0] for i in range(160)],dtype = float)
-                player.info_cards[0:(len(self.bids))] = [[bid[0] - (len(player.cards)/4)] for bid in self.bids] #how high all the players bid minus the average expected amount of suits they win
-                player.info_cards[4:14]                  = player.current_progress
-                player.info_cards[14:29]               = [[1] if _ == len(player.cards) else [0] for _ in range(self.max_rounds)]         #how many cards there are in his hand
-                player.info_cards[29:33]              = [[1] if _ == self.players.index(player) else [0] for _ in range(number_of_players)]   #what place in the players the player has
-                player.info_cards[33:39]			  = [[1] if _ == self.trump else [0] for _ in range(6)] #which color is currently trump
-                player.info_cards[39:40]			  = [player.round_score - player.current_bid]
+                player.play_net.list_input(0,[bid [0] - (len(player.cards)/4) for bid in self.bids]) #how high all the players bid minus the average expected amount of suits they win
+                player.play_net.list_input(4,player.current_stm) #current short term memory
+                player.play_net.list_input(14,[1 if _ == len(player.cards) else 0 for _ in range(self.max_rounds)])      #how many cards there are in his hand
+                player.play_net.list_input(29,[1 if _ == self.players.index(player) else 0 for _ in range(number_of_players)])   #what place in the players the player has
+                player.play_net.list_input(33,[1 if _ == self.trump else 0 for _ in range(6)]) #which color is currently trump
+                player.play_net.list_input(39,[player.round_score - player.current_bid]) #current bid
              
-                player.info_cards   [40:(40+60)]           = [ [1] if card in turn_cards   else [0] for card in deck.deck ]
-                player.info_cards   [(40+60):(40+60+60)]   = [ [1] if card in player.cards else [0] for card in deck.deck ]      
+                player.play_net.list_input(40,[ 1 if card in turn_cards   else 0 for card in deck.deck ]) # which cards have been played
+                player.play_net.list_input((40+60),[ 1 if card in player.cards else 0 for card in deck.deck ] ) #which cards are in the players hand  
                 
                 current_suit = deck.legal(turn_cards,player.cards,self.trump)
                 turn_cards.append(player.play())
                 
                 print("Player {} plays {}".format(player.name,turn_cards[-1]))
 
+            
             elif isinstance(player, Human_Player):
                 print("\n{} has bid {} and scored {} so far.".format(player.name,player.current_bid,player.round_score))
                 #print("\nThese cards have been played:")
@@ -176,9 +178,11 @@ class Game:
         winner = self.players[[card.tv for card in turn_cards].index(max(card.tv for card in turn_cards))]        
         self.starting_player(winner)# --> rearanges the players of the player such that the winner is in the first position
         print("\n        {} won this turn!\n_________________________________________________________".format(winner.name))
+        input()
+        clear()
         #____________________________________________________
         #SCORING
-        
+
         winner.round_score += 1
         
   
@@ -195,12 +199,17 @@ class Game:
                 player.cards.append(round_deck.pop(-1)) 
                 #pop not only removes the item at index but also returns it
                 
-        if not lastround:
-            trump_card = round_deck.pop(-1)        
-            self.trump = trump_card.color  
-            print('\nTrump is {}\n'.format(deck.colors[trump_card.color]))
-        elif lastround:
-            self.trump = 5 #Narr --> kein Trumpf weil letzte Runde
+        if self.true_trump:
+            if not lastround:
+                trump_card = round_deck.pop(-1)        
+                self.trump = trump_card.color  
+
+            elif lastround:
+                self.trump = 5 #Narr --> kein Trumpf weil letzte Runde
+        elif not self.true_trump:
+            self.trump = 0 #trump is red every time so the bots have a better time learning
+            
+        #print('Trump is {}'.format(deck.colors[self.trump]))
                    
         #print("Note: this ought to be removed for the final version:")
         for player in self.players:
@@ -214,19 +223,20 @@ class Game:
             if isinstance(player,Player):
             #____________________________________________________
             #bid estimation BOTS
-                player.info_bid                 = np.array([[0] for i in range(89)],dtype = float)
-                player.info_bid.astype(float)
+                
+                player.bid_net.list_input(0,[0,0,0,0]) #s.t. bids that are not yet given become 0 (the average bid height)
                 if self.bids:
-                    player.info_bid[0:len(self.bids)]= [[np.float32(bid[0] - (len(player.cards)/4))] for bid in self.bids]   #how high all the players bid minus the average expected amount of suits they win
-                player.info_bid[4:19]         = [[1] if _ == len(player.cards) else [0] for _ in range(self.max_rounds)]                 #how many cards there are in his hand
-                player.info_bid[19:23]        = [[1] if _ == self.players.index(player) else [0] for _ in range(number_of_players)]      #what place in the players the player has
-                player.info_bid[23:29]		  = [[1] if _ == self.trump else [0] for _ in range(6)] #which color is currently trump
+                    player.bid_net.list_input(0,[bid[0] - (len(player.cards)/4) for bid in self.bids])  #how high all the players bid minus the average expected amount of suits they win
+                player.bid_net.list_input(4,[1 if _ == len(player.cards) else 0 for _ in range(self.max_rounds)])                 #how many cards there are in his hand
+                player.bid_net.list_input(19,[1 if _ == self.players.index(player) else 0 for _ in range(number_of_players)])      #what place in the players the player has
+                player.bid_net.list_input(23,[1 if _ == self.trump else 0 for _ in range(6)]) #which color is currently trump
 
-                player.info_bid[29:(29+60)]   = [ [1] if card in player.cards else [0] for card in deck.deck  ]
-				
+                player.bid_net.list_input(29,[ 1 if card in player.cards else 0 for card in deck.deck  ])# cards in hand
+                
                 last_player_bool = (True if self.players.index(player) ==  3 else False)
                 self.bids.append([player.bid(self.current_round,last_player = last_player_bool)])
-                print('bid {} is '.format(player),player.current_bid,'\n')
+                print('bid {} is '.format(player),int(player.current_bid),'\n')
+                
             #____________________________________________________
             #bid estimation Humans
             elif isinstance(player,Human_Player):
@@ -244,6 +254,10 @@ class Game:
             print("The total amount of bids is at {0}, {1} turns will be played.\n_________________________________________________________".format(int(np.sum(self.bids)),int(self.current_round )))
         else:
             print("The total amount of bids is at {0}, {1} turn will be played.\n_________________________________________________________".format(int(np.sum(self.bids)),int(self.current_round )))
+
+        input()
+        clear()
+
         for turn in range(self.current_round):
             self.turn(turn)
 			
@@ -253,22 +267,22 @@ class Game:
             if player.current_bid == player.round_score:
                 player.game_score += player.current_bid*10 + 20 #ten point for every turn won and 20 for guessing right
                 
-                print("Player {0} bid {1} and scored {2}. He recieves {3} points".format(player.name,
-                                                                                           player.current_bid,
-                                                                                           player.round_score,
-                                                                                            (player.current_bid*10 + 20)))
+                print("Player {0} bid {1} and scored {2}. They recieve {3} points".format(player.name,
+                                                                                           int(player.current_bid),
+                                                                                           int(player.round_score),
+                                                                                            int((player.current_bid*10 + 20))))
                 
             else:
                 player.game_score -= abs(player.current_bid-player.round_score)*10 #ten points for every falsly claimed suit
                 
-                print("Player {0} bid {1} and scored {2}. He loses {3} points".format(player.name,
-                                                                                       player.current_bid,
-                                                                                       player.round_score,
-                                                                                       (abs(player.current_bid - player.round_score) *10)))
+                print("Player {0} bid {1} and scored {2}. They lose {3} points".format(player.name,
+                                                                                       int(player.current_bid),
+                                                                                       int(player.round_score),
+                                                                                       int((abs(player.current_bid - player.round_score) *10))))
 		
         print("_________________________________________________________\n\n        Total \n_________________________________________________________")
         for player in self.players:
-            print("Player {0}'s score is at {1}".format(player.name,player.game_score))
+            print("Player {0}'s score is at {1}".format(player.name,int(player.game_score)))
         print("_________________________________________________________")
         
         for player in self.players:
@@ -304,42 +318,45 @@ def play_game(game_pool):
         print("Player {0} takes Place {1} with {2} points.".format(
               winnerlist[_],_+1,winnerlist[_].game_score))
 			  
-			  
+    input() 
 			  
 			  
 if __name__ == "__main__":
-	print(txt)
-	hmp_given = False
-	while not hmp_given:             
-		hmp_input = input("How many Human Players want to play?\n")
+    print(txt)
+    hmp_given = False
+    while not hmp_given:             
+            hmp_input = input("How many Human Players want to play?\n")
 
-		try:
-			hmp_int = int(hmp_input)
-			if hmp_int > 4 or hmp_int < 1:
-				print("Must be between 0 and 4!")
-			else:
-				if not hmp_int == 1:
-					print("Game is played with {} Player(s) and {} Bots.".format(hmp_int,(4-hmp_int)))
-				else:
-					print("Game is played with {} Player and {} Bots.".format(hmp_int,(4-hmp_int)))
+            try:
+                    hmp_int = int(hmp_input)
+                    if hmp_int > 4 or hmp_int < 1:
+                            print("Must be between 0 and 4!")
+                    else:
+                            if not hmp_int == 1:
+                                    print("Game is played with {} Player(s) and {} Bots.".format(hmp_int,(4-hmp_int)))
+                            else:
+                                    print("Game is played with {} Player and {} Bots.".format(hmp_int,(4-hmp_int)))
 
-				hmp = hmp_int
-				hmp_given = True
-		except ValueError:
-			print("Must be an Integer!")
-				
-				
-				
-	real_players = [Human_Player(_) for _ in range(hmp)]
-	bot_players  = load_pool(4-hmp) 
-	current_pool = []            
-	for _ in real_players:
-		current_pool.append(_)
-	for _ in bot_players:
-		current_pool.append(_)
-		
+                            hmp = hmp_int
+                            hmp_given = True
+            except ValueError:
+                    print("Must be an Integer!")
+                            
+                            
+    bot_names = utils.load_bot_names()
+    bot_names.sort(key=lambda bot_name : diagnostics.score_estim(10,bot_name)[0],reverse=True)
+    real_players = [Human_Player(_) for _ in range(hmp)]
+    bot_players  = [Player(bot_name) for bot_name in bot_names[:(4-hmp)]]
+    current_pool = []            
+    current_pool.extend(real_players)
+    current_pool.extend(bot_players)
+            
+    print(f"\nYour enemies have the following average scores:")
+    for bot in bot_players:
+        print(bot,':',int(np.round(diagnostics.score_estim(10,bot)[0],0)))
+    print("Good Luck!\n")
+    print("Game starts!")
 
-	print("Game starts!")
-	pausevar = input("\nPress any button to continue")
-	clear()
-	play_game(current_pool)       
+    pausevar = input("\nPress any button to continue")
+    clear()
+    play_game(current_pool)       

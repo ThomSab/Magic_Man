@@ -32,6 +32,7 @@ def species_represent(last_gen_species=None):
         current_gen_species = last_gen_species.copy()
         for last_gen_species_idx,species in last_gen_species.items():#the species index remains the same but the representative is changed
             new_representative_name = random.choice(species["MEMBERS"])
+            utils.save_representative(new_representative_name)
             current_gen_species[last_gen_species_idx]["REPRESENTATIVE"] = new_representative_name
             current_gen_species[last_gen_species_idx]["MEMBERS"]        = []#the representative will be added automatically. 
             #(In theory it is possible that the representative of a species is appended to another species, but that is a problem for another day.)
@@ -41,14 +42,16 @@ def species_represent(last_gen_species=None):
         current_gen_species = {}
         representative_name = random.choice(utils.load_bot_names())
         current_gen_species["0"]={"REPRESENTATIVE":representative_name,"MEMBERS":[representative_name]} #first species
+        utils.save_representative(representative_name)
         return current_gen_species
 
+    
 
-
-def speciation (bots,c1=2,c2=2,c3=0.7,compat_thresh=2.0,species_dict = {}):
+def speciation (bots,pop_size,c1=2,c2=2,c3=0.7,compat_thresh=2.0,species_dict = {}):
     """
     ______
     Input:
+        List of Player Objects
         The set compatibility threshold
         the compatibility matrix
         the representatives of each species in a dictonary
@@ -72,9 +75,19 @@ def speciation (bots,c1=2,c2=2,c3=0.7,compat_thresh=2.0,species_dict = {}):
         if utils.compatibility_search(bot,c1,c2,c3,compat_thresh,species_dict):#comp_search assigns the species to the bot but not the bot to the species dict
             species_dict[bot.species]["MEMBERS"].append(bot.name)# from object to name
         else:
-            print("new_species")
-            bot.species = str(len(species_dict)+1) #new species index
-            species_dict[str(len(species_dict)+1)] = {"REPRESENTATIVE":bot.name,"MEMBERS":[bot.name]} #new species with bot as representative
+            print(f"New species created, represented by {bot}")
+            bot.species = str(len(species_dict)) #new species index --> bc the indices start at zero, the lenght is always the highest index plus one
+            species_dict[str(len(species_dict))] = {"REPRESENTATIVE":bot.name,"MEMBERS":[bot.name]} #new species with bot as representative
+            utils.save_representative(bot.name)
+            
+
+    gen_members=[]
+    for species_idx,species in species_dict.items():
+        gen_members.extend(species["MEMBERS"])
+    print(gen_members,len(gen_members))
+    assert len(gen)members == pop_size, "Species dictionary contains too many bots!"
+        
+    
 
     return species_dict
    
@@ -99,6 +112,8 @@ def fitness (bots,species = {}):
         bot_score,alpha = diagnostics.score_estim(2,bot.name) #2 is the width of the confidence band around the estim
         assert alpha < 0.5, "The score estimate for {} is insignificant at a level of {}".format(bot.name,alpha) #check whether the estimate is reliable
         bot.fitness = 200+ bot_score / len(species[bot.species]["MEMBERS"]) #fitness fn as defined in the paper plus 400 st. fitness is not negative
+        if bot.fitness <0:
+            bot.fitness = 0
 
 
 def species_allocation(bots,species_dict,pop_size):
@@ -122,12 +137,13 @@ def species_allocation(bots,species_dict,pop_size):
     for species_idx,species in species_dict.items():
         species_fitness_sum = sum([bot.fitness for bot in bots if bot.species == species_idx])
         
-        species_sizes[species_idx] = int(np.floor(pop_size * (species_fitness_sum/pop_fitness_sum)))
+        species_sizes[species_idx] = int(np.round(pop_size * (species_fitness_sum/pop_fitness_sum)))
     
     while sum([species_size for species_idx,species_size in species_sizes.items()]) > pop_size: #population is oversize
         rs_idx,rs_size = random.choice(list(species_sizes.items()))
-        if rs_size >= 5:
+        if species_sizes[rs_idx] > 5:
             species_sizes[rs_idx] -= 1 #random species gets one smaller 
+
 
     
     return species_sizes
@@ -448,8 +464,7 @@ def reproduce(bots,bot_species,names,species_size,preservation_rate):
     bots.sort(key = lambda bot: bot.fitness,reverse = True) #highest score to lowest
     
 
-    for bot in bots[int(np.round(preservation_rate*species_size)):]:
-            utils.incinerate(bot.name) #incinerate the bad part of the generation a priori
+    kill_list = [bot.name for bot in bots[int(np.round(preservation_rate*species_size)):]]#incinerate the bad part of the generation after speciation
             
     bots = bots[:int(np.round(preservation_rate*species_size))] #remove the incinerated botnames from the bot list
     
@@ -478,10 +493,8 @@ def reproduce(bots,bot_species,names,species_size,preservation_rate):
 
     print(f"New Species Size is {len(new_generation)} \n{len(new_generation)-species_size} bots are killed off.")
     new_generation=new_generation[:species_size]#st the species does not get larger than anticipated
+    assert len(new_generation) == species_size, f"Species is too large!"
     
+    kill_list.extend([bot.name for bot in bots if bot.name not in new_generation and bot.name not in kill_list]) #delete the rest of the old generation
     
-    
-    for bot in [bot for bot in bots if bot.name not in new_generation]:
-            utils.incinerate(bot.name) #delete the rest of the old generation
-    
-    return new_generation
+    return new_generation,kill_list

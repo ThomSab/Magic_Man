@@ -36,7 +36,7 @@ def score_estim(width,bot_name):
     #the confidence depends then depends on the width entered
     alpha = 1 - stats.norm.cdf((width)*np.sqrt(n)/std)
     
-    if np.isnan(mean) or alpha==0 or n<=10:
+    if np.isnan(mean) or alpha==0 or n<10:
         mean,alpha = (-100,0.5)
         
     return mean,alpha
@@ -191,7 +191,7 @@ def species_over_time(pop_size):
         species_file.close()
     
     gens=[int(gen_idx.split('_')[-1]) for gen_idx,species_dict in species_dict_list.items()]
-    species_sizes=[[0 for _ in gens] for _ in range(pop_size)] #at most 25 species for now
+    species_sizes=[[0 for _ in gens] for _ in range(pop_size+100)]
     
     for gen_idx,species_dict in species_dict_list.items():
         for species_idx,species in species_dict.items():
