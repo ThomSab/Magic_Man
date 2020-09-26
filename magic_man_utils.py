@@ -242,8 +242,16 @@ def save_bot_genome(bot_name,genome,directory=cwd):
 
 
 def save_representative(bot_name,directory=cwd):
-    shutil.copytree(directory + f'\Bots\{bot_name}',directory + f'\Bots\Species_Representatives\{bot_name}')   
-    return
+    try:
+        shutil.copytree(directory + f'\Bots\{bot_name}',directory + f'\Bots\Species_Representatives\{bot_name}')   
+        return
+    except FileExistsError:
+        print("Saving representative {} copy failed: {}".format(bot_name,"FileExistError"))
+        return
+    except Exception as exception:
+        print("Saving representative {} copy failed: {}".format(bot_name,exception))
+        sys.exit("Unhandled Error")
+        
 
 def load_gen_species(gen_idx,assign_species=False,bots=None,directory = cwd):
     """
@@ -262,6 +270,9 @@ def load_gen_species(gen_idx,assign_species=False,bots=None,directory = cwd):
     return species_obj[("GEN_"+str(gen_idx))]
 
 def load_bot_genome(bot_name,directory= (cwd+r'\Bots' )):
+    if type(bot_name)!=str:
+        print(f"{str(bot_name)} not string type: {type(bot_name)}")
+        bot_name = bot_name.name
     try:
         with open(directory + '\{}\genome.json'.format(bot_name),'r') as genome_file:
             return json.load(genome_file)
@@ -443,12 +454,18 @@ def nn_compatibility_distance(nn_genome_A,nn_genome_B,c_1,c_2,c_3):
         excess_genes = len([ inn_num for inn_num in nng_B_history if inn_num >  nng_A_history[-1]])
     #How many genes the newer genome has that have a higher innovation number than the highest one from the older genome
     #this is E, the number of excess genes
+
+    nng_A_dict = {gene["INNOVATION"]:gene for gene in nn_genome_A}#the data structure should have been like this from the start but its too late now
+    nng_B_dict = {gene["INNOVATION"]:gene for gene in nn_genome_B}
+
+    matching_innovations = list(set(nng_A_history).intersection(set(nng_B_history)))
         
-    nng_A_matching = [gene for gene in nn_genome_A if gene["INNOVATION"] in nng_B_history] 
-    nng_B_matching = [gene for gene in nn_genome_B if gene["INNOVATION"] in nng_A_history]
-    #this listcomp does take ~99% of the computing time according to the profiler
+    nng_A_matching = [nng_A_dict[innovation] for innovation in matching_innovations] 
+    nng_B_matching = [nng_B_dict[innovation] for innovation in matching_innovations]
+    #instead of the listcompt that would take ~99% of the computing time according to the profiler
     
     disjoint_genes = (len(nng_A_history)-len(nng_A_matching)) + (len(nng_B_history)-len(nng_B_matching)) - excess_genes
+
     """
     number of disjoint genes are the amount of genes that are not matching with any gene from the other genome by innovation number
     excess genes are substracted bc. they are not both disjoint AND excess genes
@@ -510,7 +527,7 @@ def compatibility_search(bot,c1,c2,c3,compat_thresh,species_dict = {}):
     """    
     for species_idx,species in species_dict.items():
         representative_name=species_dict[species_idx]["REPRESENTATIVE"]
-        bcd = bot_compatibility_distance(load_bot_genome(bot),load_bot_genome(representative_name,directory = (cwd + r'\Bots\Species_Representatives')),c1,c2,c3)
+        bcd = bot_compatibility_distance(load_bot_genome(bot.name),load_bot_genome(representative_name,directory = (cwd + r'\Bots\Species_Representatives')),c1,c2,c3)
         print(f'Bot {bot} has a compatibility distance of {np.round(bcd,3)} to the species represented by {representative_name}')
         if  bcd < compat_thresh:
             bot.species = species_idx
@@ -565,8 +582,20 @@ def check_for_connection_duplication(bot_connection_genome,connection_gene):
     if (dubs := [gene for gene in bot_connection_genome if (gene["IN"] == connection_gene["IN"] and gene["OUT"] == connection_gene["OUT"])]):
         return dubs
     return False
-    
-    
+
+
+
+def incinerate_redundant_representatives(new_species_representatives):
+    #kill off unnecessary representatives
+    for bot in os.listdir(cwd + r'\Bots\Species_Representatives'):
+        present = False
+        for species_idx,species in new_species_representatives.items():        
+            if species["REPRESENTATIVE"] == bot:
+                present=True
+        if not present:
+            incinerate(bot,directory=cwd+r'\Bots\Species_Representatives')   
+
+  
 def incinerate(bot_name,directory=cwd+'\Bots'):
     """
     ______
@@ -598,20 +627,51 @@ def current_gen(directory=cwd):
         species_obj = json.load(species_file)
         species_file.close()
     
-    return max([int(gen_idx[-1]) for gen_idx,species_dict in species_obj.items()])   
-    
+    return max([int(gen_idx.split('_')[-1]) for gen_idx,species_dict in species_obj.items()])   
+
+
     
 def check_for_species_dict(current_gen_idx):
+    """
+    Possible states:
+        1 - last gen created new bots but didnt delete the old ones
+        2 - last gen created new bots but did not save the species dictionary
+        3 - last gen created new bots and created the species dictionary
+    """
     try:
+        bot_names =load_bot_names()
         gen_species_dict = load_gen_species(current_gen_idx)
+        incinerate_redundant_representatives(gen_species_dict)
+        
+        bots_in_species_dict = []
         for species_idx,species in gen_species_dict.items():
-            scores=[load_bot_score(botname) for botname in species["MEMBERS"]] #fails if the bots in the dictionary are not in the pool anymore
+            bots_in_species_dict.extend([botname for botname in species["MEMBERS"]]) #fails if the bots in the dictionary are not in the pool anymore
+        bot_names.sort()
+        bots_in_species_dict.sort()
 
-    except SystemExit:
-        print("ERROR: No intact Species dictionary for last generation.")
-        return False
-     
-    return True    
+        
+        
+        unspeciated = [bot for bot in bot_names if bot not in bots_in_species_dict]
+        if unspeciated:
+            print(len(bot_names), len(bots_in_species_dict))
+            if len(bot_names) > len(bots_in_species_dict):
+                print("Last generation reproduced but the old bots were not incinerated: Deleting old Bots")
+                for bot in unspeciated:
+                    incinerate(bot)
+
+                
+                return check_for_species_dict(current_gen_idx)
+            
+            else:
+                print("Last generation reproduced but was not speciated: Generating new species_dict")
+                return current_gen_idx+1
+            
+        else:
+            return current_gen_idx
+            
+    except Exception as exception:
+        sys.exit(f"Error in species dictionary check: {exception}")    
+  
         
         
         

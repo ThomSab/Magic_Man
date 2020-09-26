@@ -66,10 +66,6 @@ The visualization needs a method how to locate the nodes in the graph.
 __________________________________________________________________________________________________
 [NEW] Species Size Allocation: DONE
 When does a species grow and by how much? The fitness function is purposed for this bc. it protects small species.
-__________________________________________________________________________________________________
-[CHANGE] play_to_significance function: NOT DONE
-The function has potential for more effiency. 
-List could be sorted by significance. 
 
 __________________________________________________________________________________________________
 [CHANGE] Data_Structure: NOT DONE (BUT OPTIONAL)

@@ -170,11 +170,15 @@ def use_multi_core(bots,width=10,alpha_thresh=0.1):
             above_alpha.remove(significant_tuple[1])
         print(f"{len(significant_tuples)} out of {len(bots)} scores are significant")
 
-        if not above_alpha:
-            return above_alpha
+        if not above_alpha: 
+            return above_alpha #hacky catch number one
         
         average_alpha = np.mean([tuple[0][1] for tuple in score_estim_list])
         n_games = min([100,int(np.ceil((average_alpha-alpha_thresh)*25/average_alpha)+10)])#a rough estimate, can be made more precise
+
+        if n_games<5:
+            n_games=5 #hacky catch number two
+            
         print( f"The pools score estimates have a {np.round(average_alpha*100,2)}% chance of being off by more than {width}")
 
         
@@ -249,16 +253,7 @@ def play_to_significance(bots,width=10,alpha_thresh=0.1,playing_method=use_singl
     return True
 
 
-def incinerate_redundant_representatives(new_species_representatives):
-    #kill off unnecessary representatives
-    #this should be seperate function
-    for bot in os.listdir(utils.cwd + r'\Bots\Species_Representatives'):
-        present = False
-        for species_idx,species in new_species_representatives.items():        
-            if species["REPRESENTATIVE"] == bot:
-                present=True
-        if not present:
-            utils.incinerate(bot,directory=utils.cwd+r'\Bots\Species_Representatives')    
+   
 
 
 def inquiry_step(gen_idx,bots,significance_width,significance_val,playing_method):
@@ -312,27 +307,30 @@ def progressive_step(gen_idx,bots,population_size,link_thresh,node_thresh,weight
 
     names = utils.load_empty_bot_names(gen_idx)      
     name_idx = 0
-    kill_list = []
+    kill_list,new_members_list = [],[]
     for species_idx,species in species_dict.items():
         species["MEMBERS"],species_kill_list = reproduce(bots,species["MEMBERS"],names[name_idx:],species_sizes[species_idx],preservation_rate) #from name to name
         name_idx+=len(species["MEMBERS"])
         kill_list.extend(species_kill_list)
-
+        new_members_list.extend(species["MEMBERS"])
+        
         mutate_species(species["MEMBERS"],link_thresh,node_thresh,weights_mut_thresh,rand_weight_thresh,pert_rate)
 
-    bots = [Player(bot_name) for bot_name in utils.load_bot_names() if bot_name not in kill_list] #load the new generation
-
-    new_species_representatives = species_represent(species_dict)
-    incinerate_redundant_representatives(new_species_representatives)
-
-    assert len(bots)==pop_size, "Too many bots!!"
+    bots = [Player(bot_name) for bot_name in new_members_list if bot_name not in kill_list] #load the new generation
+    assert len(bots)==population_size, f"Population size is off: {population_size}"
     
-    new_species_dict = speciation(bots=bots,population_size=pop_size,species_dict = new_species_representatives)
+    new_species_representatives = species_represent(species_dict)
+    utils.incinerate_redundant_representatives(new_species_representatives)
+
+    
+    new_species_dict = speciation(bots=bots,pop_size=population_size,species_dict = new_species_representatives)
     utils.save_generation_species(gen_idx,new_species_dict)#save species under gen idx
 
     for bot in kill_list:
         utils.incinerate(bot)
-
+        
+    assert len(bots)==population_size, "Too many bots!!"
+    
     return
 
 
@@ -394,10 +392,10 @@ def start_training(significance_width=10,
     
     current_gen = utils.current_gen()
 
-    if not utils.check_for_species_dict(current_gen):
-        current_gen+=1 #bc the utils function fetches the generation from the existing species dictionaries
+    true_current_gen = utils.check_for_species_dict(current_gen)
+    if true_current_gen > current_gen:
         new_species_representatives = species_represent()#empty representative species
-        new_species_dict = speciation(bots=[Player(bot) for bot in utils.load_bot_names()],species_dict = new_species_representatives)
+        new_species_dict = speciation(bots=[Player(bot) for bot in utils.load_bot_names()],pop_size=population_size,species_dict = new_species_representatives)
         utils.save_generation_species(current_gen,new_species_dict)
 
 
@@ -419,7 +417,8 @@ if __name__ == "__main__": #so it doesnt run when imported
     print(f"{multiprocessing.cpu_count()} cores available.")
     diagnostics.population_progress()
     diagnostics.species_over_time(pop_size=100)
-    start_training(significance_val=0.49,significance_width=20,pert_rate=0.3)
+    scrape_pool(2,utils.load_bot_names())
+    start_training(significance_val=0.25,significance_width=10,pert_rate=0.3)
 
     
 
