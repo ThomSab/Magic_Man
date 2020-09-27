@@ -174,7 +174,7 @@ def use_multi_core(bots,width=10,alpha_thresh=0.1):
             return above_alpha #hacky catch number one
         
         average_alpha = np.mean([tuple[0][1] for tuple in score_estim_list])
-        n_games = min([100,int(np.ceil((average_alpha-alpha_thresh)*25/average_alpha)+10)])#a rough estimate, can be made more precise
+        n_games = min([100,int(np.ceil((average_alpha-alpha_thresh)*25/average_alpha)+5)])#a rough estimate, can be made more precise
 
         if n_games<5:
             n_games=5 #hacky catch number two
@@ -317,7 +317,7 @@ def progressive_step(gen_idx,bots,population_size,link_thresh,node_thresh,weight
         mutate_species(species["MEMBERS"],link_thresh,node_thresh,weights_mut_thresh,rand_weight_thresh,pert_rate)
 
     bots = [Player(bot_name) for bot_name in new_members_list if bot_name not in kill_list] #load the new generation
-    assert len(bots)==population_size, f"Population size is off: {population_size}"
+    assert len(bots)==population_size, f"Population size is off: {len(bots)}"
     
     new_species_representatives = species_represent(species_dict)
     utils.incinerate_redundant_representatives(new_species_representatives)
@@ -418,9 +418,9 @@ if __name__ == "__main__": #so it doesnt run when imported
     diagnostics.population_progress()
     diagnostics.species_over_time(pop_size=100)
     scrape_pool(2,utils.load_bot_names())
-    start_training(significance_val=0.25,significance_width=10,pert_rate=0.3)
 
-    
+    start_training(significance_val=0.49,significance_width=20,pert_rate=0.3)
+
 
     
 """

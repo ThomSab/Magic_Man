@@ -88,7 +88,7 @@ def speciation (bots,pop_size,c1=2,c2=2,c3=0.7,compat_thresh=2.25,species_dict =
     for species_idx,species in species_dict.items():
         gen_members.extend(species["MEMBERS"])
     print(gen_members,len(gen_members))
-    assert len(gen_members) == pop_size, "Species dictionary contains too many bots!"
+    assert len(gen_members) == pop_size, f"Species dictionary contains the wrong amount of bots: {len(gen_members)}, \n{[bot.name for bot in bots if bot.name not in gen_members]} were not speciated."
         
     
 

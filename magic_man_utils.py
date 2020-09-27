@@ -295,7 +295,7 @@ def load_bot_names(directory=(cwd + r'\Bots')):
 
 def load_empty_bot_names(gen_idx,directory=cwd):
     with open(directory + r'\names.json','r') as name_file:
-        return json.load(name_file)[str(gen_idx)]
+        return json.load(name_file)[str(gen_idx%20)]
 
 def load_progress(directory=cwd):
     try:
