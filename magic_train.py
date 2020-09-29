@@ -413,19 +413,14 @@ def start_training(significance_width=10,
 if __name__ == "__main__": #so it doesnt run when imported
     print(txt)
 
-    #bots = [Player(bot_name) for bot_name in utils.load_bot_names()[:4]]
+    bots = [Player(bot_name) for bot_name in utils.load_bot_names()[:4]]
+    for bot in bots:
+        diagnostics.graph(bot.name,'bid')
     print(f"{multiprocessing.cpu_count()} cores available.")
     diagnostics.population_progress()
     diagnostics.species_over_time(pop_size=100)
     scrape_pool(2,utils.load_bot_names())
 
-    start_training(significance_val=0.49,significance_width=20,pert_rate=0.3)
+    start_training(significance_val=0.25,significance_width=10,pert_rate=0.3)
 
 
-    
-"""
-The profiler estimates a game to take ~6.7 sec
-Back-of-the-envelope estimation:
-6.7 seconds * ~1000 games to significance * 150 specimen / 4 scores per game * ~200 generations = 
-about 1.6 years
-"""

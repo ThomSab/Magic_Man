@@ -79,15 +79,18 @@ def speciation (bots,pop_size,c1=2,c2=2,c3=0.7,compat_thresh=2.25,species_dict =
             species_dict[bot.species]["MEMBERS"].append(bot.name)# from object to name
         else:
             print(f"New species created, represented by {bot}")
-            bot.species = str(len(species_dict)) #new species index --> bc the indices start at zero, the lenght is always the highest index plus one
-            species_dict[str(len(species_dict))] = {"REPRESENTATIVE":bot.name,"MEMBERS":[bot.name]} #new species with bot as representative
+            species_idx_list = [int(species_idx) for species_idx,species in species_dict.items()]
+            minimum_free_species_idx = min(list(set(range(max(species_idx_list)+2))-set(species_idx_list))) #all indexes that are not in the dictionary
+            #"why +2?" one may ask. +1 in case all indexes are taken and another +1 bc of how the range function works 
+            bot.species = str(minimum_free_species_idx)
+            species_dict[str(minimum_free_species_idx)] = {"REPRESENTATIVE":bot.name,"MEMBERS":[bot.name]} #new species with bot as representative
             utils.save_representative(bot.name)
             
 
     gen_members=[]
     for species_idx,species in species_dict.items():
         gen_members.extend(species["MEMBERS"])
-    print(gen_members,len(gen_members))
+    print(gen_members,len(gen_members),species_dict)
     assert len(gen_members) == pop_size, f"Species dictionary contains the wrong amount of bots: {len(gen_members)}, \n{[bot.name for bot in bots if bot.name not in gen_members]} were not speciated."
         
     

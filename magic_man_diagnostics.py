@@ -36,7 +36,7 @@ def score_estim(width,bot_name):
     #the confidence depends then depends on the width entered
     alpha = 1 - stats.norm.cdf((width)*np.sqrt(n)/std)
     
-    if np.isnan(mean) or alpha==0 or n<10:
+    if np.isnan(mean) or alpha==0 or n<5:
         mean,alpha = (-100,0.5)
         
     return mean,alpha
