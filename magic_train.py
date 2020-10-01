@@ -414,8 +414,10 @@ if __name__ == "__main__": #so it doesnt run when imported
     print(txt)
 
     bots = [Player(bot_name) for bot_name in utils.load_bot_names()[:4]]
-    for bot in bots:
+    for bot in bots[0:1]:
         diagnostics.graph(bot.name,'bid')
+        diagnostics.graph(bot.name,'play')
+        diagnostics.graph(bot.name,'stm')
     print(f"{multiprocessing.cpu_count()} cores available.")
     diagnostics.population_progress()
     diagnostics.species_over_time(pop_size=100)

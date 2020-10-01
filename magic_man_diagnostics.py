@@ -134,7 +134,51 @@ def gen_avg_score(width,alpha):
     assert not (insignificant_scores := ([tuple[1] for tuple in score_tuples if tuple[0][1] > alpha])), f"Not all bot scores are estimated to a significant level: {insignificant_scores}"
     
     return sum([tuple[0][0] for tuple in score_tuples])/len(score_tuples)
+
+
+def node_positions(Graph,net_type,scale=1,center=None,aspect_ratio=4 / 3):
+
+    G, center = nx.drawing.layout._process_params(Graph, center=center, dim=2)
+    nodes = set(Graph.nodes)
+    height = 1
+    width = aspect_ratio * height
+    offset = (width / 2, height / 2)
+
+    if net_type == 'play':
+        left = list(range(utils.N_play_sensors))
+        right = list(range(utils.N_play_sensors,utils.N_play_sensors+utils.N_play_outputs))        
+    if net_type == 'bid':
+        left = list(range(utils.N_bid_sensors))
+        right = list(range(utils.N_bid_sensors,utils.N_bid_sensors+utils.N_bid_outputs))
+    if net_type == 'stm':
+        left = list(range(utils.N_stm_sensors))
+        right = list(range(utils.N_stm_sensors,utils.N_stm_sensors+utils.N_stm_outputs))
+
+    hidden = nodes - set(left) - set(right)
+
+
+
+    left_xs   = np.repeat(-width, len(left))
+    hidden_xs = np.repeat(0, len(hidden))
+    right_xs  = np.repeat(width, len(right))
+
+    left_ys   = np.linspace(0, height, len(left))
+    hidden_ys = np.linspace(0, height, len(hidden))
+    right_ys  = np.linspace(0, height, len(right))
+
+    left_pos   = np.column_stack([left_xs, left_ys])
+    #print(hidden_xs,hidden_ys)
+    hidden_pos = np.column_stack([hidden_xs, hidden_ys])
+    right_pos  = np.column_stack([right_xs, right_ys])
+
     
+    pos = np.concatenate([left_pos, right_pos, hidden_pos])
+    pos = nx.drawing.layout.rescale_layout(pos, scale=scale) + center
+
+    pos = dict(zip(nodes, pos))
+    return pos
+
+ 
 def graph(bot_name,net_type):
     """
     TODO
@@ -161,17 +205,20 @@ def graph(bot_name,net_type):
     init_innovation_number = utils.init_innovation_numbers[net_type]
     
     nn_graph = nx.DiGraph()
+    pos_graph = nx.DiGraph()
     #nn_graph.add_nodes_from([node["INDEX"] for node in node_genome])
+    for gene in connection_genome:
+        pos_graph.add_edge(gene["IN"],gene["OUT"],weight = gene["WEIGHT"])
+        
     for gene in connection_genome:
         if gene["INNOVATION"] > init_innovation_number:
             nn_graph.add_edge(gene["IN"],gene["OUT"],weight = gene["WEIGHT"])
     
+    plt.title(f"{bot_name} Added Graph Structure in {net_type} net")#only works if called before nx.draw
 
-    nx.draw_planar(nn_graph,arrows = True,alpha=0.5)
-    nx.draw_networkx_labels(nn_graph,pos = nx.planar_layout(nn_graph))
+    nx.draw(nn_graph,arrows = True,alpha=0.5,pos = node_positions(pos_graph,net_type))
+    nx.draw_networkx_labels(nn_graph,pos = node_positions(pos_graph,net_type))
     
-    plt.title(label = f"{bot_name} Added Graph Structure in {net_type} net")
-    plt.legend()
     plt.show()
     
 
