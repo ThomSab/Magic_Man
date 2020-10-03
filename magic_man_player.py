@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import sys
 import json
 import magic_man_deck as deck
 import magic_man_utils as utils
@@ -91,7 +92,11 @@ class Player:
     #______________________________________________________________________________
     #Output Calculation methods
     def bid (self,round_idx,last_player = False):
-        activation = self.bid_net.activation()
+        try:
+            activation = self.bid_net.activation()
+        except RecursionError:
+            raise RecursionError
+        
         
         self.current_activation = ((utils.logit_bidding(activation[0])*round_idx)/4)
             #multiply by the number of card in hand
@@ -115,11 +120,19 @@ class Player:
         return self.current_bid
     
     def stm (self):#Short Term Memory
-        self.current_stm = self.stm_net.activation()       
+        try:
+            self.current_stm = self.stm_net.activation()       
+        except RecursionError:
+            raise RecursionError
+        
         return self.current_stm
        
     def play (self):
-        activation = self.play_net.activation()
+        try:
+            activation = self.play_net.activation()
+        except RecursionError:
+            raise RecursionError
+            
         
         hand_cards = np.array([ [1] if (card in self.cards and card.legal) else [0] for card in deck.deck ])
         card_activation = hand_cards*activation #sort out those that the player cant play
@@ -189,10 +202,11 @@ class Player:
             activation of output nodes
             """
             
-            
+
             #clearing the non-sensor nodes
             for node in self.output_nodes + self.hidden_nodes:
                 node.activation = None
+
             
             #calculating activations
             return [node.node_activation() for node in self.output_nodes] 

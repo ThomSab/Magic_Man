@@ -26,14 +26,12 @@ def species_represent(last_gen_species=None):
         or one single representative for the initial generation
     """
 
-    
+    print("Generating new species Representatives")
 
     if last_gen_species != None:
         current_gen_species = last_gen_species.copy()
+        last_gen_species = utils.clear_empty_species_from_dict(last_gen_species)
         for last_gen_species_idx,species in last_gen_species.items():#the species index remains the same but the representative is changed
-            if len(species["MEMBERS"])==0:
-               del current_gen_species[last_gen_species_idx]
-            else:
                 new_representative_name = random.choice(species["MEMBERS"])
                 utils.save_representative(new_representative_name)
                 current_gen_species[last_gen_species_idx]["REPRESENTATIVE"] = new_representative_name
@@ -50,7 +48,7 @@ def species_represent(last_gen_species=None):
 
     
 
-def speciation (bots,pop_size,c1=2,c2=2,c3=0.7,compat_thresh=2.25,species_dict = {}):
+def speciation (bots,pop_size,c1=2,c2=2,c3=0.7,compat_thresh=5,species_dict = {}):
     """
     ______
     Input:
@@ -90,7 +88,6 @@ def speciation (bots,pop_size,c1=2,c2=2,c3=0.7,compat_thresh=2.25,species_dict =
     gen_members=[]
     for species_idx,species in species_dict.items():
         gen_members.extend(species["MEMBERS"])
-    print(gen_members,len(gen_members),species_dict)
     assert len(gen_members) == pop_size, f"Species dictionary contains the wrong amount of bots: {len(gen_members)}, \n{[bot.name for bot in bots if bot.name not in gen_members]} were not speciated."
         
     
@@ -117,7 +114,7 @@ def fitness (bots,species = {}):
     for bot in bots:
         bot_score,alpha = diagnostics.score_estim(2,bot.name) #2 is the width of the confidence band around the estim
         assert alpha < 0.5, "The score estimate for {} is insignificant at a level of {}".format(bot.name,alpha) #check whether the estimate is reliable
-        bot.fitness = (200+ bot_score) / (0.1*len(species[bot.species]["MEMBERS"])) #fitness fn as defined in the paper plus 400 st. fitness is not negative
+        bot.fitness = (200+ bot_score) / (1 + 0.1*len(species[bot.species]["MEMBERS"])) #fitness fn as defined in the paper plus 400 st. fitness is not negative
         if bot.fitness <0:
             bot.fitness = 0
 
@@ -135,7 +132,8 @@ def species_allocation(bots,species_dict,pop_size):
         species according to its performance
     """
 
-    print(pop_size,"Pop Size")
+    print(f"Population Size is {pop_size}, allocating to species...")
+    
     
     species_sizes ={}
     pop_fitness_sum = sum([bot.fitness for bot in bots])
@@ -147,7 +145,7 @@ def species_allocation(bots,species_dict,pop_size):
     
     while sum([species_size for species_idx,species_size in species_sizes.items()]) > pop_size: #population is oversize
         rs_idx,rs_size = random.choice(list(species_sizes.items()))
-        if species_sizes[rs_idx] >= 5:
+        if species_sizes[rs_idx] > 5:
             species_sizes[rs_idx] -= 1 #random species gets one smaller
             
     while sum([species_size for species_idx,species_size in species_sizes.items()]) < pop_size: #population is undersize
@@ -226,6 +224,10 @@ def mutate_node(nn_node_genome,nn_connection_genome,net_type):
         st. A - B becomes A - NEW - B
         The Mutation to keep track within a generation
     """
+    
+    if len(nn_connection_genome) == 0:#in case of no connectivity
+        return nn_node_genome,nn_connection_genome,None,None
+    
     n_nodes = nn_node_genome[-1]["INDEX"]
     #the index of the last added node
     #(could also be len(nn_node_genome) but this is constant time)
@@ -434,11 +436,9 @@ def produce_offspring(parent_a,parent_b):
     
 
     #check for recursive structure in the connection genome
-    for connection_gene in offspring_genome["{}_connection_genome".format(net)]:
-        if utils.check_for_recursion(offspring_genome["{}_connection_genome".format(net)],
-                            initial_gene = connection_gene,current_gene=connection_gene):
-            print("Recursive Offspring Prevented")
-            return False
+    if utils.genome_check_for_recursion(fit_parent,genome=offspring_genome):
+        print("Recursive Offspring Prevented")
+        return False
 
     return offspring_genome
 

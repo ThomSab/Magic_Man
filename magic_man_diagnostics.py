@@ -175,11 +175,13 @@ def node_positions(Graph,net_type,scale=1,center=None,aspect_ratio=4 / 3):
     pos = np.concatenate([left_pos, right_pos, hidden_pos])
     pos = nx.drawing.layout.rescale_layout(pos, scale=scale) + center
 
+    
+    
     pos = dict(zip(nodes, pos))
     return pos
 
  
-def graph(bot_name,net_type):
+def graph(bot_name,net_type,added_only=True):
     """
     TODO
     https://www.geeksforgeeks.org/python-visualize-graphs-generated-in-networkx-using-matplotlib/
@@ -200,24 +202,23 @@ def graph(bot_name,net_type):
     
     bot_genome = utils.load_bot_genome(bot_name)
     connection_genome = bot_genome["{}_connection_genome".format(net_type)]
-    #node_genome = bot_genome["{}_node_genome".format(net_type)]
+    node_genome = bot_genome["{}_node_genome".format(net_type)]
 
     init_innovation_number = utils.init_innovation_numbers[net_type]
     
     nn_graph = nx.DiGraph()
-    pos_graph = nx.DiGraph()
-    #nn_graph.add_nodes_from([node["INDEX"] for node in node_genome])
+    #nn_graph = nx.DiGraph()
+    nn_graph.add_nodes_from([node["INDEX"] for node in node_genome])
+    
     for gene in connection_genome:
-        pos_graph.add_edge(gene["IN"],gene["OUT"],weight = gene["WEIGHT"])
-        
-    for gene in connection_genome:
-        if gene["INNOVATION"] > init_innovation_number:
+        if gene["INNOVATION"] > init_innovation_number or added_only==False:
             nn_graph.add_edge(gene["IN"],gene["OUT"],weight = gene["WEIGHT"])
+    
     
     plt.title(f"{bot_name} Added Graph Structure in {net_type} net")#only works if called before nx.draw
 
-    nx.draw(nn_graph,arrows = True,alpha=0.5,pos = node_positions(pos_graph,net_type))
-    nx.draw_networkx_labels(nn_graph,pos = node_positions(pos_graph,net_type))
+    nx.draw(nn_graph,arrows = True,alpha=0.5,pos = node_positions(nn_graph,net_type))
+    nx.draw_networkx_labels(nn_graph,pos = node_positions(nn_graph,net_type))
     
     plt.show()
     

@@ -174,10 +174,10 @@ def use_multi_core(bots,width=10,alpha_thresh=0.1):
             return above_alpha #hacky catch number one
         
         average_alpha = np.mean([tuple[0][1] for tuple in score_estim_list])
-        n_games = min([100,int(np.ceil((average_alpha-alpha_thresh)*25/average_alpha)+5)])#a rough estimate, can be made more precise
+        n_games = min([100,int(np.ceil((average_alpha-alpha_thresh)*25/average_alpha)+50)])#a rough estimate, can be made more precise
 
-        if n_games<5:
-            n_games=5 #hacky catch number two
+        if n_games<10:
+            n_games=10 #hacky catch number two
             
         print( f"The pools score estimates have a {np.round(average_alpha*100,2)}% chance of being off by more than {width}")
 
@@ -300,6 +300,7 @@ def progressive_step(gen_idx,bots,population_size,link_thresh,node_thresh,weight
         
     """
     species_dict = utils.load_gen_species(gen_idx-1,assign_species = True, bots = bots)#if there is a dictionary
+    species_dict = utils.clear_empty_species_from_dict(species_dict)
     fitness(bots = bots,species = species_dict)
     species_sizes=species_allocation(bots=bots,species_dict=species_dict,pop_size=population_size)
     
@@ -413,16 +414,15 @@ def start_training(significance_width=10,
 if __name__ == "__main__": #so it doesnt run when imported
     print(txt)
 
-    bots = [Player(bot_name) for bot_name in utils.load_bot_names()[:4]]
-    for bot in bots[0:1]:
-        diagnostics.graph(bot.name,'bid')
-        diagnostics.graph(bot.name,'play')
-        diagnostics.graph(bot.name,'stm')
+    bots = [Player(bot_name) for bot_name in utils.load_bot_names()]
     print(f"{multiprocessing.cpu_count()} cores available.")
     diagnostics.population_progress()
     diagnostics.species_over_time(pop_size=100)
-    scrape_pool(2,utils.load_bot_names())
 
-    start_training(significance_val=0.25,significance_width=10,pert_rate=0.3)
+    for _ in range(3):
+        diagnostics.graph(bots[random.randint(0,len(bots)-1)].name,'play')
+    
+    scrape_pool(2,utils.load_bot_names())
+    start_training(significance_val=0.05,significance_width=5,pert_rate=0.3)
 
 

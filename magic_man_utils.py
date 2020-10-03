@@ -446,12 +446,20 @@ def nn_compatibility_distance(nn_genome_A,nn_genome_B,c_1,c_2,c_3):
     Output:
         Compatibility distance between the two neural net genomes
     """
-    nng_A_history,nng_B_history = [gene["INNOVATION"] for gene in nn_genome_A],[gene["INNOVATION"] for gene in nn_genome_B] 
-    
-    if nng_A_history[-1] >= nng_B_history[-1]:# 'history[-1] instead of max(history) bc history list should be sorted
-        excess_genes = len([ inn_num for inn_num in nng_A_history if inn_num >  nng_B_history[-1]])
+    nng_A_history,nng_B_history = [gene["INNOVATION"] for gene in nn_genome_A],[gene["INNOVATION"] for gene in nn_genome_B]
+
+
+    max_innovation_A,max_innovation_B=0,0
+    if not len(nng_A_history)==0:
+        max_innovation_A = nng_A_history[-1]
+    if not len(nng_B_history)==0:
+        max_innovation_B = nng_B_history[-1]
+        
+    if max_innovation_A >= max_innovation_B:# 'history[-1] instead of max(history) bc history list should be sorted
+        excess_genes = len([ inn_num for inn_num in nng_A_history if inn_num >  max_innovation_B])
     else:
-        excess_genes = len([ inn_num for inn_num in nng_B_history if inn_num >  nng_A_history[-1]])
+        excess_genes = len([ inn_num for inn_num in nng_B_history if inn_num >  max_innovation_A])
+
     #How many genes the newer genome has that have a higher innovation number than the highest one from the older genome
     #this is E, the number of excess genes
 
@@ -475,8 +483,12 @@ def nn_compatibility_distance(nn_genome_A,nn_genome_B,c_1,c_2,c_3):
     weight_diff = abs(weights_A-weights_B)         #all absolute differences in weight in matching genes
     avg_wd_mg = np.mean(weight_diff)                #average weight difference of matching genes or W bar   
     N = max([len(nn_genome_A),len(nn_genome_B)])    #the amount of genes in the larger genome
+
+    if np.isnan(avg_wd_mg):
+       avg_wd_mg = 0
+
     
-    return ((c_1*excess_genes+c_2*disjoint_genes)/N + c_3*avg_wd_mg) #the compatibility distance or delta
+    return ((c_1*excess_genes+c_2*disjoint_genes)/(1+N) + c_3*avg_wd_mg) #the compatibility distance or delta
     
 
 
@@ -528,7 +540,7 @@ def compatibility_search(bot,c1,c2,c3,compat_thresh,species_dict = {}):
     for species_idx,species in species_dict.items():
         representative_name=species_dict[species_idx]["REPRESENTATIVE"]
         bcd = bot_compatibility_distance(load_bot_genome(bot.name),load_bot_genome(representative_name,directory = (cwd + r'\Bots\Species_Representatives')),c1,c2,c3)
-        print(f'Bot {bot} has a compatibility distance of {np.round(bcd,3)} to the species represented by {representative_name}')
+        #print(f'Bot {bot} has a compatibility distance of {np.round(bcd,3)} to the species represented by {representative_name}')
         if  bcd < compat_thresh:
             bot.species = species_idx
             return bot.species
@@ -566,6 +578,53 @@ def check_for_recursion(bot_connection_genome,initial_gene,current_gene=None):
                 return True
     return False
     
+
+
+def genome_check_for_recursion(bot,genome=None):
+    """
+    ______
+    Input:
+        A loaded Bot
+        Optional custom genome
+        
+    ______
+    Output:
+        Whether there is a recursive loop in the connections of any of the bots nns
+        If the optional genome was given the nns from the given net are tested instead of the bot
+    ______
+        This method is usefull to check nns from a genome for recursive loop before the genome is saved
+        A dummy bot is loaded and its genome is replaced with the new one.
+        Then the new genome is checked for recursion
+    """
+
+    output_name = bot.name
+    
+    if genome != None:
+
+        output_name = "Dummy Bot"
+        
+        bid_node_genome, bid_connection_genome  = genome["bid_node_genome"], genome["bid_connection_genome"]
+        play_node_genome,play_connection_genome = genome["play_node_genome"],genome["play_connection_genome"]
+        stm_node_genome, stm_connection_genome  = genome["stm_node_genome"], genome["stm_connection_genome"]
+        
+        bot.bid_net  = bot.Network(bid_node_genome, bid_connection_genome, net_sigmoid_function = bot.sigmoid)
+        bot.play_net = bot.Network(play_node_genome,play_connection_genome,net_sigmoid_function = bot.sigmoid)
+        bot.stm_net  = bot.Network(stm_node_genome, stm_connection_genome, net_sigmoid_function = bot.sigmoid)
+    
+    try:
+        try:
+            bot.play()
+        except ValueError:
+            pass #the bot tries to play a card but it has no cards in hand
+        bot.stm()
+        bot.bid(1)
+        return False #no recursive connections
+    except RecursionError:
+        print(f"RECURSION CHECK FAIL in {output_name}")
+        return True #yes recursive connections
+    
+
+
     
     
 def check_for_connection_duplication(bot_connection_genome,connection_gene):
@@ -671,9 +730,14 @@ def check_for_species_dict(current_gen_idx):
             
     except Exception as exception:
         sys.exit(f"Error in species dictionary check: {exception}")    
-  
+
+
+def clear_empty_species_from_dict(species_dict):
+    """
+    If the a species does not get to reproduce at all it remains in the species dictionary nonetheless
+    This function clears the empty species from the dict as well
+    """
+    return{species_idx:species for species_idx,species in species_dict.items() if len(species["MEMBERS"])>0}
+       
         
         
-        
-        
-    
