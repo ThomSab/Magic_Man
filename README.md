@@ -22,7 +22,7 @@ Training time could be increased significantly by this.
 Implementing biases to the nodes of the neural nets. This might improve learning.
 Playing a game now takes about 0.5 to 1.5 seconds longer. Depending on the improvement this might be worth it.
 
-##Results
+## Results
 
 The NEAT algorithm so far has perfomed considerably worse than the fixed topology approach.
 While the fixed topology neural nets stalled at about 70 points average score the neural nets trained with NEAT stalled at negative 50.
@@ -33,7 +33,7 @@ The bots started with full connectivity as described in the reference paper, i.e
 I suspect that this might be a serious disadvantage because a completely disconnected net performes much better.
 If there are no connections between the sensors and the output at all, average score is about 8.
 
-##Speciation 
+## Speciation 
 
 Speciation works perfectly.
 
