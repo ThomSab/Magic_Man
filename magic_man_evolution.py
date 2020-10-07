@@ -48,7 +48,7 @@ def species_represent(last_gen_species=None):
 
     
 
-def speciation (bots,pop_size,c1=2,c2=2,c3=0.7,compat_thresh=5,species_dict = {}):
+def speciation (bots,pop_size,c1=2,c2=2,c3=0.3,compat_thresh=4,species_dict = {}):
     """
     ______
     Input:
@@ -114,7 +114,7 @@ def fitness (bots,species = {}):
     for bot in bots:
         bot_score,alpha = diagnostics.score_estim(2,bot.name) #2 is the width of the confidence band around the estim
         assert alpha < 0.5, "The score estimate for {} is insignificant at a level of {}".format(bot.name,alpha) #check whether the estimate is reliable
-        bot.fitness = (200+ bot_score) / (1 + 0.1*len(species[bot.species]["MEMBERS"])) #fitness fn as defined in the paper plus 400 st. fitness is not negative
+        bot.fitness = (bot_score) / len(species[bot.species]["MEMBERS"]) #fitness fn as defined in the paper plus 400 st. fitness is not negative
         if bot.fitness <0:
             bot.fitness = 0
 
@@ -292,7 +292,7 @@ def mutate_weights(connection_genome,node_genome,random_weight_thresh,pert_rate)
 
 
     
-def mutation_step(bot_name,link_thresh=0.05,node_thresh= 0.03,weights_mut_thresh=0.8,rand_weight_thresh=0.1,pert_rate=0.1):
+def mutation_step(bot_name,link_thresh,node_thresh,weights_mut_thresh,rand_weight_thresh,pert_rate):
     """
     ______
     Input:

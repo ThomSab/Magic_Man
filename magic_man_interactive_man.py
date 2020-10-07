@@ -209,7 +209,7 @@ class Game:
         elif not self.true_trump:
             self.trump = 0 #trump is red every time so the bots have a better time learning
             
-        #print('Trump is {}'.format(deck.colors[self.trump]))
+        print('Trump is {}'.format(deck.colors[self.trump]))
                    
         #print("Note: this ought to be removed for the final version:")
         for player in self.players:

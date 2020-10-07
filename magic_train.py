@@ -306,7 +306,11 @@ def progressive_step(gen_idx,bots,population_size,link_thresh,node_thresh,weight
     
     print("Spezies Sizes Dict: ", species_sizes)
 
-    names = utils.load_empty_bot_names(gen_idx)      
+ 
+    names = utils.load_empty_bot_names(gen_idx)
+    if population_size>100:
+        names = utils.load_boring_names(gen_idx) #bc finding approx. 50000 names isnt as easy as it seems
+    
     name_idx = 0
     kill_list,new_members_list = [],[]
     for species_idx,species in species_dict.items():
@@ -380,15 +384,15 @@ def generation(gen_idx,
 
 
 
-def start_training(significance_width=10,
-                   significance_val=0.1,
-                   population_size=100,
-                   link_thresh=0.05,
-                   node_thresh= 0.03,
-                   weights_mut_thresh=0.8,
-                   rand_weight_thresh=0.1,
-                   pert_rate=0.1,
-                   preservation_rate = 0.5,
+def start_training(significance_width,
+                   significance_val,
+                   population_size,
+                   link_thresh,
+                   node_thresh,
+                   weights_mut_thresh,
+                   rand_weight_thresh,
+                   pert_rate,
+                   preservation_rate,
                    playing_method=use_multi_core):
     
     current_gen = utils.current_gen()
@@ -423,6 +427,15 @@ if __name__ == "__main__": #so it doesnt run when imported
         diagnostics.graph(bots[random.randint(0,len(bots)-1)].name,'play')
     
     scrape_pool(2,utils.load_bot_names())
-    start_training(significance_val=0.05,significance_width=5,pert_rate=0.3)
+    start_training(significance_val=0.25,
+                   significance_width=5,
+                   pert_rate=0.25,
+                   population_size=500,
+                   link_thresh=0.05,
+                   node_thresh=0.03,
+                   weights_mut_thresh=0.8,
+                   rand_weight_thresh=0.1,
+                   preservation_rate=0.5,
+                   playing_method=use_multi_core)
 
 

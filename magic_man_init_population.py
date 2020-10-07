@@ -70,9 +70,14 @@ stm_iin  = [ ((N_stm_outputs) *N_stm_sensors)  ]
 if __name__ == "__main__":
 
 
-    pop_size = 100
+    pop_size = 500
+
+    empty_names = utils.load_empty_bot_names(0)
+    if pop_size>100:
+        empty_names = utils.load_boring_names(0)
     
-    for player in utils.load_empty_bot_names(0)[:pop_size]:
+    
+    for player in empty_names[:pop_size]:
         utils.save_init_genome(player,
             init_genome = initial_genome(N_bid_sensors,N_bid_outputs,N_play_sensors,N_play_outputs,N_stm_sensors,N_stm_outputs,connectivity=False))
         utils.save_init_score(player)
@@ -84,7 +89,12 @@ if __name__ == "__main__":
     bots = [Player(bot_name) for bot_name in utils.load_bot_names()]
     
     for bot in bots:
-        mutation_step(bot.name)
+        mutation_step(bot.name,
+                      link_thresh=0.05,
+                      node_thresh=0.03,
+                      weights_mut_thresh=0.8,
+                      rand_weight_thresh=0.1,
+                      pert_rate=0.25)
     # init mutation step st. the first generation isnt pointless
         
     utils.save_generation_species(0,speciation(bots,pop_size,c1=2,c2=2,c3=0.7,compat_thresh=10,species_dict=species_represent()))

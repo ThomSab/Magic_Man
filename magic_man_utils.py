@@ -296,6 +296,10 @@ def load_bot_names(directory=(cwd + r'\Bots')):
 def load_empty_bot_names(gen_idx,directory=cwd):
     with open(directory + r'\names.json','r') as name_file:
         return json.load(name_file)[str(gen_idx%26)]
+        
+def load_boring_names(gen_idx,directory=cwd):
+    with open(directory + r'\boring_names.json','r') as name_file:
+        return json.load(name_file)[str(gen_idx%50)]
 
 def load_progress(directory=cwd):
     try:
@@ -481,14 +485,14 @@ def nn_compatibility_distance(nn_genome_A,nn_genome_B,c_1,c_2,c_3):
 
     weights_A,weights_B = np.array([gene["WEIGHT"] for gene in nng_A_matching]),np.array([gene["WEIGHT"] for gene in nng_B_matching])
     weight_diff = abs(weights_A-weights_B)         #all absolute differences in weight in matching genes
-    avg_wd_mg = np.mean(weight_diff)                #average weight difference of matching genes or W bar   
+    avg_wd_mg = np.mean(weight_diff)                #average weight difference of matching genes or W bar
     N = max([len(nn_genome_A),len(nn_genome_B)])    #the amount of genes in the larger genome
 
-    if np.isnan(avg_wd_mg):
+    if np.isnan(avg_wd_mg) or not avg_wd_mg:
        avg_wd_mg = 0
 
     
-    return ((c_1*excess_genes+c_2*disjoint_genes)/(1+N) + c_3*avg_wd_mg) #the compatibility distance or delta
+    return ((c_1*excess_genes+c_2*disjoint_genes)/(1+0.1*N) + c_3*avg_wd_mg) #the compatibility distance or delta
     
 
 
