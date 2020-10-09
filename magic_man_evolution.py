@@ -48,7 +48,7 @@ def species_represent(last_gen_species=None):
 
     
 
-def speciation (bots,pop_size,c1=2,c2=2,c3=0.3,compat_thresh=4,species_dict = {}):
+def speciation (bots,pop_size,c1=2,c2=2,c3=0.3,compat_thresh=5,species_dict = {}):
     """
     ______
     Input:

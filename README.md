@@ -35,7 +35,7 @@ If there are no connections between the sensors and the output at all, average s
 
 ## Speciation 
 
-Speciation works perfectly.
+Speciation works almost perfectly. It is more volatile than the reference papers results but it seems to work as anticipated
 
 ![Speciation](https://user-images.githubusercontent.com/64082072/94849529-d774f700-0425-11eb-819e-e07a556ac6bf.png)
 

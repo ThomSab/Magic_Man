@@ -285,6 +285,15 @@ def load_bot_score(bot_name,directory=cwd):
         with open(directory + r'\Bots\{}\score.json'.format(bot_name),'r') as score_file:
             return json.load(score_file)["SCORE"]
     
+    except json.decoder.JSONDecodeError:
+        print(f"{bot_name}'s score file is broken: Resetting the score file.")
+        with open(directory + r'\Bots\{}\score.json'.format(bot_name),'r') as score_file:
+            reset_score(bot_name)
+            print(f"reset {bot_name} score")
+            return load_bot_score(bot_name)
+                
+        
+    
     except Exception as exception:#if the integrity of the botfile is compromised its important to know in which bot it is
         print(f"Loading {bot_name}'s score failed: {exception}")
         sys.exit(f"{bot_name}'s score file is inaccessable.")       

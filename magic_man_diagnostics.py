@@ -207,17 +207,24 @@ def graph(bot_name,net_type,added_only=True):
     init_innovation_number = utils.init_innovation_numbers[net_type]
     
     nn_graph = nx.DiGraph()
-    #nn_graph = nx.DiGraph()
-    nn_graph.add_nodes_from([node["INDEX"] for node in node_genome])
+    for node in node_genome:
+        nn_graph.add_node(node["INDEX"],bias = node["BIAS"])
     
     for gene in connection_genome:
         if gene["INNOVATION"] > init_innovation_number or added_only==False:
             nn_graph.add_edge(gene["IN"],gene["OUT"],weight = gene["WEIGHT"])
-    
+            
+    edges,weights = zip(*nx.get_edge_attributes(nn_graph,'weight').items())
+    nodes,biases = zip(*nx.get_node_attributes(nn_graph,'bias').items())
     
     plt.title(f"{bot_name} Added Graph Structure in {net_type} net")#only works if called before nx.draw
+    cmap = plt.cm.seismic
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin = min(weights+biases), vmax=max(weights+biases)))
+    sm._A = []
+    plt.colorbar(sm)
 
-    nx.draw(nn_graph,arrows = True,alpha=0.5,pos = node_positions(nn_graph,net_type))
+
+    nx.draw(nn_graph,arrows = True,alpha=0.5,pos = node_positions(nn_graph,net_type),edge_color=weights,node_color=biases,edge_cmap=cmap,cmap=cmap)
     nx.draw_networkx_labels(nn_graph,pos = node_positions(nn_graph,net_type))
     
     plt.show()

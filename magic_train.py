@@ -418,18 +418,23 @@ def start_training(significance_width,
 if __name__ == "__main__": #so it doesnt run when imported
     print(txt)
 
-    bots = [Player(bot_name) for bot_name in utils.load_bot_names()]
+    botnames=utils.load_bot_names()
+    botnames.sort(key=lambda bot_name : diagnostics.score_estim(10,bot_name)[0],reverse=True)
+    bots = [Player(bot_name) for bot_name in botnames]
+    
     print(f"{multiprocessing.cpu_count()} cores available.")
     diagnostics.population_progress()
     diagnostics.species_over_time(pop_size=100)
 
-    for _ in range(3):
-        diagnostics.graph(bots[random.randint(0,len(bots)-1)].name,'play')
+    for _ in range(2):
+        diagnostics.graph(bots[_].name,'play')
+        diagnostics.graph(bots[_].name,'bid')
+        diagnostics.graph(bots[_].name,'stm')
     
     scrape_pool(2,utils.load_bot_names())
     start_training(significance_val=0.25,
                    significance_width=5,
-                   pert_rate=0.25,
+                   pert_rate=0.1,
                    population_size=500,
                    link_thresh=0.05,
                    node_thresh=0.03,
