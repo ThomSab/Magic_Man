@@ -70,7 +70,7 @@ stm_iin  = [ ((N_stm_outputs) *N_stm_sensors)  ]
 if __name__ == "__main__":
 
 
-    pop_size = 500
+    pop_size = 40
 
     empty_names = utils.load_empty_bot_names(0)
     if pop_size>100:

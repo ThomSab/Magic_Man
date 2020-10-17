@@ -116,7 +116,7 @@ def fitness (bots,species = {}):
         assert alpha < 0.5, "The score estimate for {} is insignificant at a level of {}".format(bot.name,alpha) #check whether the estimate is reliable
         bot.fitness = (bot_score) / len(species[bot.species]["MEMBERS"]) #fitness fn as defined in the paper plus 400 st. fitness is not negative
         if bot.fitness <0:
-            bot.fitness = 0
+            bot.fitness = 1
 
 
 def species_allocation(bots,species_dict,pop_size):
@@ -140,7 +140,6 @@ def species_allocation(bots,species_dict,pop_size):
     
     for species_idx,species in species_dict.items():
         species_fitness_sum = sum([bot.fitness for bot in bots if bot.species == species_idx])
-        
         species_sizes[species_idx] = int(np.round(pop_size * (species_fitness_sum/pop_fitness_sum)))
     
     while sum([species_size for species_idx,species_size in species_sizes.items()]) > pop_size: #population is oversize

@@ -432,7 +432,7 @@ if __name__ == "__main__": #so it doesnt run when imported
         diagnostics.graph(bots[_].name,'stm')
     
     scrape_pool(2,utils.load_bot_names())
-    start_training(significance_val=0.25,
+    start_training(significance_val=0.05,
                    significance_width=5,
                    pert_rate=0.1,
                    population_size=500,

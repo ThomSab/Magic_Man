@@ -1,5 +1,6 @@
 import os
 import json
+import sys
 import numpy as np
 import scipy.stats as stats
 import matplotlib.pyplot as plt
@@ -136,6 +137,23 @@ def gen_avg_score(width,alpha):
     return sum([tuple[0][0] for tuple in score_tuples])/len(score_tuples)
 
 
+def hidden_node_grade(self_node,in_edges_dict,grade_dict,hidden):
+    #where to place the hidden node in the graph plot
+    
+    if not grade_dict[self_node] == None:
+        return grade_dict[self_node]
+    
+    #is the input node is on the end of an edge from another hidden node?
+    hidden_in_nodes=[node for node in [item[0] for item in in_edges_dict[self_node]] if node in list(hidden)]
+    if hidden_in_nodes:
+        highest_input_grade = max([hidden_node_grade(hidden_in_node,in_edges_dict,grade_dict,hidden) for hidden_in_node in hidden_in_nodes])
+        self_grade=highest_input_grade+1
+    else:
+        self_grade = 0
+
+    grade_dict[self_node]=self_grade
+    return self_grade
+
 def node_positions(Graph,net_type,scale=1,center=None,aspect_ratio=4 / 3):
 
     G, center = nx.drawing.layout._process_params(Graph, center=center, dim=2)
@@ -156,10 +174,21 @@ def node_positions(Graph,net_type,scale=1,center=None,aspect_ratio=4 / 3):
 
     hidden = nodes - set(left) - set(right)
 
+    if hidden:
+        in_edges_dict={node:G.in_edges(node)for node in hidden}
+        grade_dict={node:None for node in hidden}
+        
+        for node in hidden:
+            hidden_node_grade(node,in_edges_dict,grade_dict,hidden)
+        maximum_grade=max([grade for node,grade in grade_dict.items()])
 
+        
 
-    left_xs   = np.repeat(-width, len(left))
-    hidden_xs = np.repeat(0, len(hidden))
+    left_xs   = np.repeat(-width, len(left))    
+    hidden_list=list(hidden)
+    hidden_list.sort()
+    hidden_xs = [-0.5*width + 1/(1+maximum_grade)*width*grade_dict[node] for node in hidden_list]
+
     right_xs  = np.repeat(width, len(right))
 
     left_ys   = np.linspace(0, height, len(left))
@@ -167,7 +196,6 @@ def node_positions(Graph,net_type,scale=1,center=None,aspect_ratio=4 / 3):
     right_ys  = np.linspace(0, height, len(right))
 
     left_pos   = np.column_stack([left_xs, left_ys])
-    #print(hidden_xs,hidden_ys)
     hidden_pos = np.column_stack([hidden_xs, hidden_ys])
     right_pos  = np.column_stack([right_xs, right_ys])
 
@@ -203,25 +231,32 @@ def graph(bot_name,net_type,added_only=True):
     bot_genome = utils.load_bot_genome(bot_name)
     connection_genome = bot_genome["{}_connection_genome".format(net_type)]
     node_genome = bot_genome["{}_node_genome".format(net_type)]
-
     init_innovation_number = utils.init_innovation_numbers[net_type]
+
     
-    nn_graph = nx.DiGraph()
+    nn_graph = nx.DiGraph()#initializing the graph; adding the nodes and edges
     for node in node_genome:
-        nn_graph.add_node(node["INDEX"],bias = node["BIAS"])
-    
+        nn_graph.add_node(node["INDEX"],bias = node["BIAS"])    
     for gene in connection_genome:
         if gene["INNOVATION"] > init_innovation_number or added_only==False:
             nn_graph.add_edge(gene["IN"],gene["OUT"],weight = gene["WEIGHT"])
-            
-    edges,weights = zip(*nx.get_edge_attributes(nn_graph,'weight').items())
-    nodes,biases = zip(*nx.get_node_attributes(nn_graph,'bias').items())
+
+
+    try:#listing the weights and biases st. the graph can be colored
+        edges,weights = zip(*nx.get_edge_attributes(nn_graph,'weight').items())
+        nodes,biases = zip(*nx.get_node_attributes(nn_graph,'bias').items())
+    except ValueError:
+        print(f"No Connections in {bot_name}'s {net_type} net")
+        return
+    except Exception as exception:
+        sys.exit(f"Graphing {bot_name}'s {net_type} net failed: {exception}")
+
     
     plt.title(f"{bot_name} Added Graph Structure in {net_type} net")#only works if called before nx.draw
     cmap = plt.cm.seismic
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin = min(weights+biases), vmax=max(weights+biases)))
     sm._A = []
-    plt.colorbar(sm)
+    plt.colorbar(sm)#colorbar legend so the colors are identifiable
 
 
     nx.draw(nn_graph,arrows = True,alpha=0.5,pos = node_positions(nn_graph,net_type),edge_color=weights,node_color=biases,edge_cmap=cmap,cmap=cmap)
