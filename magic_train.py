@@ -52,52 +52,43 @@ def play_game(game_pool):
 
 
 
-def use_single_core(bot_names,width=10,alpha_thresh=0.1):
+def play_single_round(game_pool,round_idx=14):
     """
     ______
     Input:
-        significance interval
-        significance value
+        game pool of four players
+        index of the round played
     ______
     Output:
-        none
+        None
     ______
-        uses one core to make the bots play until each of their score values has
-        a significance value of alpha or lower
-    """ 
-    
-    above_alpha = bot_names.copy()
-    
-    while len(above_alpha)>=4:
-        mean,alpha = diagnostics.score_estim(width,(above_bot := above_alpha[0]).name)
-        if alpha <= alpha_thresh and alpha != 0:
-            print(f"{above_alpha.pop(0)} score is significant")
-        else:
-            if np.isnan(alpha) or alpha == 0:
-                print( f"{above_alpha[0].name}'s score cannot be estimated because he/she has not played yet.")
-                alpha = 0.5
-            else:    
-                print( f"{above_alpha[0].name}'s score estimate of {np.round(mean,2)} has a {np.round(alpha*100,2)}% chance of being off by more than {width}")
-            above_alpha_copy = above_alpha.copy()
-            above_alpha_copy.remove(above_bot)
-            #let them play some games
-            n_games = min([100,int(np.ceil((alpha-alpha_thresh)*50/alpha))])
-            for game_idx in range(n_games):
-            #this just so happens to be approximately appropriate
-            #the closer the alpha is the fewer games the bot has to play to significance
-            #this is a rough estimate and can be made more precise
-                random.shuffle(above_alpha_copy) #st every bot has a diverse set of enemies
-                game_pool = [above_bot]+above_alpha_copy[:3]
-            
-                play_game(game_pool)
-            
-                #show how the score behaves over those games
-                for player in game_pool:
-                    utils.add_score(player.name,player.game_score)
+        Adds the seperate score for each player for the played round to their directory
+    """
 
-                print(f"{game_idx+1}/{n_games}")
 
+    game_pool_copy = game_pool.copy()
+    if len(game_pool_copy) != 4:
+        sys.exit(f"Bot pool faulty: {game_pool_copy}")
+    try:
+        game = Game(number_of_players,game_pool,deck.deck.copy()) #whos playing
+    except TypeError:
+        print("No Bots loaded yet.")
+    for player in game_pool:
+        player.game_score = 0
+
+    if not round_idx == 15:
+        game.starting_player(game_pool_copy[round_idx%4])
+        game.round(round_idx)
+    else:
+        game.starting_player(game_pool_copy[15%4])
+        game.round(round_idx,lastround = True)                                                          
+
+    for player in game_pool:
+        utils.add_seperate_score(player.name,player.game_score)
+    print(game_pool)
+    
     return
+
 
 
 def scrape_pool(n_cores,above_alpha):
@@ -136,7 +127,7 @@ def play_pool (n_cores,pool_list):
     """ 
     start_time = time.time()
     with multiprocessing.Pool(n_cores) as p:    
-        p.map(play_game,pool_list)
+        p.map(play_single_round,pool_list)
     play_time=time.time()-start_time
     print(f"Played in {play_time}")
 
@@ -202,7 +193,7 @@ def use_multi_core(bots,width=10,alpha_thresh=0.1):
                 
 
 
-def play_to_significance(bots,width=10,alpha_thresh=0.1,playing_method=use_single_core):
+def play_to_significance(bots,width=10,alpha_thresh=0.1):
     """
     ______
     Input:
@@ -219,7 +210,7 @@ def play_to_significance(bots,width=10,alpha_thresh=0.1,playing_method=use_singl
         
     """
     
-    above_alpha = playing_method(bots,width,alpha_thresh)
+    above_alpha = use_multi_core(bots,width,alpha_thresh)
                 
 
     #The last three bots play with bots that are already significant
@@ -244,7 +235,7 @@ def play_to_significance(bots,width=10,alpha_thresh=0.1,playing_method=use_singl
     scrape_pool(multiprocessing.cpu_count(),bots)#scrape leftover scores
     
     if [tuple[1] for tuple in diagnostics.bot_scores(width) if tuple[0][1] > alpha_thresh]:
-        play_to_significance(bots,width=width,alpha_thresh=alpha_thresh,playing_method=playing_method)
+        play_to_significance(bots,width=width,alpha_thresh=alpha_thresh)
         
     assert not (insignificant_scores := ([tuple[1] for tuple in diagnostics.bot_scores(width) if tuple[0][1] > alpha_thresh])),f"{insignificant_scores} are left over!"
     
@@ -256,7 +247,7 @@ def play_to_significance(bots,width=10,alpha_thresh=0.1,playing_method=use_singl
    
 
 
-def inquiry_step(gen_idx,bots,significance_width,significance_val,playing_method):
+def inquiry_step(gen_idx,bots,significance_width,significance_val):
 
     """
     ______
@@ -273,7 +264,7 @@ def inquiry_step(gen_idx,bots,significance_width,significance_val,playing_method
         Progress is logged
     """
     
-    play_to_significance(bots,significance_width,significance_val,playing_method) #verify significance
+    play_to_significance(bots,significance_width,significance_val) #verify significance
     gen_max_score,max_score_bot = diagnostics.gen_max_score(significance_width,significance_val)
     gen_max_score_conf = diagnostics.conf_band_width(significance_val,max_score_bot)
     gen_avg_score = diagnostics.gen_avg_score(significance_width,significance_val)
@@ -348,8 +339,7 @@ def generation(gen_idx,
                weights_mut_thresh=0.8,
                rand_weight_thresh=0.1,
                pert_rate=0.1,
-               preservation_rate = 0.4,
-               playing_method=use_single_core):
+               preservation_rate = 0.4):
     """
     ______
     Input:
@@ -373,12 +363,12 @@ def generation(gen_idx,
     """
 
     bots = [Player(bot_name) for bot_name in utils.load_bot_names()]
-    inquiry_step(gen_idx-1,bots,significance_width,significance_val,playing_method)
+    inquiry_step(gen_idx-1,bots,significance_width,significance_val)
 
     progressive_step(gen_idx,bots,population_size,link_thresh,node_thresh,weights_mut_thresh,rand_weight_thresh,pert_rate,preservation_rate)
 
     bots = [Player(bot_name) for bot_name in utils.load_bot_names()]
-    inquiry_step(gen_idx,bots,significance_width,significance_val,playing_method)
+    inquiry_step(gen_idx,bots,significance_width,significance_val)
   
     return
 
@@ -392,8 +382,7 @@ def start_training(significance_width,
                    weights_mut_thresh,
                    rand_weight_thresh,
                    pert_rate,
-                   preservation_rate,
-                   playing_method=use_multi_core):
+                   preservation_rate):
     
     current_gen = utils.current_gen()
 
@@ -409,7 +398,7 @@ def start_training(significance_width,
         print(f"Training generation {current_gen-1} to produce generation {current_gen}")
         generation(current_gen,
                    significance_width,significance_val,population_size,
-                   link_thresh,node_thresh,weights_mut_thresh,rand_weight_thresh,pert_rate,preservation_rate,playing_method)
+                   link_thresh,node_thresh,weights_mut_thresh,rand_weight_thresh,pert_rate,preservation_rate)
 
 
 
@@ -432,15 +421,14 @@ if __name__ == "__main__": #so it doesnt run when imported
         diagnostics.graph(bots[_].name,'stm')
     
     scrape_pool(2,utils.load_bot_names())
-    start_training(significance_val=0.05,
-                   significance_width=5,
+    start_training(significance_val=0.25,
+                   significance_width=10,
                    pert_rate=0.1,
-                   population_size=500,
+                   population_size=40,
                    link_thresh=0.05,
                    node_thresh=0.03,
                    weights_mut_thresh=0.8,
                    rand_weight_thresh=0.1,
-                   preservation_rate=0.5,
-                   playing_method=use_multi_core)
+                   preservation_rate=0.5)
 
 
