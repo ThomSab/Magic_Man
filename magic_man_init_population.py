@@ -18,15 +18,15 @@ def initial_genome(N_bid_sensors,N_bid_outputs,
     """
 
 
-    bid_sensors = [{"INDEX":idx              ,"TYPE":"SENSOR", "BIAS":np.random.normal(size = 1)[0]} for idx in range(N_bid_sensors)]
+    bid_sensors = [{"INDEX":idx              ,"TYPE":"SENSOR", "BIAS":0} for idx in range(N_bid_sensors)]
     bid_outputs = [{"INDEX":N_bid_sensors+idx,"TYPE":"OUTPUT", "BIAS":np.random.normal(size = 1)[0]} for idx in range(N_bid_outputs)]
 
    
-    play_sensors= [{"INDEX":idx               ,"TYPE":"SENSOR", "BIAS":np.random.normal(size = 1)[0]} for idx in range(N_play_sensors)]
+    play_sensors= [{"INDEX":idx               ,"TYPE":"SENSOR", "BIAS":0} for idx in range(N_play_sensors)]
     play_outputs= [{"INDEX":N_play_sensors+idx,"TYPE":"OUTPUT", "BIAS":np.random.normal(size = 1)[0]} for idx in range(N_play_outputs)]
 
 
-    stm_sensors= [{"INDEX":idx              ,"TYPE":"SENSOR", "BIAS":np.random.normal(size = 1)[0]} for idx in range(N_stm_sensors)]
+    stm_sensors= [{"INDEX":idx              ,"TYPE":"SENSOR", "BIAS":0} for idx in range(N_stm_sensors)]
     stm_outputs= [{"INDEX":N_stm_sensors+idx,"TYPE":"OUTPUT", "BIAS":np.random.normal(size = 1)[0]} for idx in range(N_stm_outputs)]
 
 
@@ -70,7 +70,7 @@ stm_iin  = [ ((N_stm_outputs) *N_stm_sensors)  ]
 if __name__ == "__main__":
 
 
-    pop_size = 40
+    pop_size = 500
 
     empty_names = utils.load_empty_bot_names(0)
     if pop_size>100:

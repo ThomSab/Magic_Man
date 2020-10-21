@@ -100,7 +100,7 @@ def score_hist(bot_name):
  
 
  
-def bot_scores(width):
+def bot_scores(width,alpha=1):
     """
     ______
     Input:
@@ -113,8 +113,9 @@ def bot_scores(width):
     """ 
     bot_names = utils.load_bot_names()
     score_tuples = [(score_estim(width,bot_name),bot_name) for bot_name in bot_names]
-    
-    return score_tuples
+    assert not (insignificant_scores := ([tuple[1] for tuple in score_tuples if tuple[0][1] > alpha])), f"Not all bot scores are estimated to a significant level: {insignificant_scores}"
+    score_dict = {bot_name:(score_estim(width,bot_name)[0]) for bot_name in bot_names}
+    return score_dict
  
 
 def gen_max_score(width,alpha):
@@ -124,17 +125,14 @@ def gen_max_score(width,alpha):
     Output:
         max bot score, bot name
     """
-    score_tuples = bot_scores(width)
-    assert not (insignificant_scores := ([tuple[1] for tuple in score_tuples if tuple[0][1] > alpha])), f"Not all bot scores are estimated to a significant level: {insignificant_scores}"
-
-    score_tuples.sort(key = lambda score_tuple: score_tuple[0][0],reverse = True)
-    return score_tuples[0][0][0],score_tuples[0][1] #this is garbage code and can be done better
+    score_dict = bot_scores(width,alpha)
+    bot_name = max(score_dict,key=score_dict.get)
+    max_score= score_dict[bot_name]
+    return max_score,bot_name
     
 def gen_avg_score(width,alpha):
-    score_tuples = bot_scores(width)
-    assert not (insignificant_scores := ([tuple[1] for tuple in score_tuples if tuple[0][1] > alpha])), f"Not all bot scores are estimated to a significant level: {insignificant_scores}"
-    
-    return sum([tuple[0][0] for tuple in score_tuples])/len(score_tuples)
+    score_dict = bot_scores(width,alpha)
+    return np.mean([mean_score for bot,mean_score in score_dict.items()])
 
 
 def hidden_node_grade(self_node,in_edges_dict,grade_dict,hidden):
@@ -276,9 +274,7 @@ def species_over_time(pop_size):
         over the generations
     """ 
     
-    with open(utils.cwd + r'\Bots\species.json','r') as species_file: #best practice would be to have a utils function load the species_dict_list but yeah
-        species_dict_list = json.load(species_file)
-        species_file.close()
+    species_dict_list = utils.load_all_species()
     
     gens=[int(gen_idx.split('_')[-1]) for gen_idx,species_dict in species_dict_list.items()]
     species_sizes=[[0 for _ in gens] for _ in range(pop_size+100)]
@@ -287,6 +283,7 @@ def species_over_time(pop_size):
         for species_idx,species in species_dict.items():
             species_sizes[int(species_idx)][int(gen_idx.split('_')[-1])] = len(species["MEMBERS"])
 
+                
     lower=[0 for _ in gens]
     for series_idx,series in enumerate(species_sizes[:-1]):
         upper = [species_sizes[series_idx][idx] + lower[idx] for idx in gens]
@@ -300,7 +297,7 @@ def species_over_time(pop_size):
 
 
 
-def population_progress():
+def population_progress(silent=False):
     progress = utils.load_progress()
     max_score = [gen["MAX"] for gen in progress]
     conf = [gen["CONF"] for gen in progress]
@@ -322,6 +319,10 @@ def population_progress():
     plt.plot(idx_list,avg,color='k',label = "Average Score",linewidth=0.5)
     
     plt.legend()
+    if silent:
+        plt.savefig('Progress.png')
+        plt.clf()
+        return
     plt.show()
 
     

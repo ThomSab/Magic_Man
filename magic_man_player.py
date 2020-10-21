@@ -71,7 +71,7 @@ class Player:
             self.play_net = self.Network(play_node_genome,play_connection_genome,net_sigmoid_function = self.sigmoid)
             self.stm_net  = self.Network(stm_node_genome, stm_connection_genome,net_sigmoid_function = self.sigmoid)
 
-            print('{} loaded'.format(self.name))
+            #print('{} loaded'.format(self.name))
             
         else:   
             print("ERROR: Player {} Directory does not exist.".format(name))

@@ -36,13 +36,14 @@ def species_represent(last_gen_species=None):
                 utils.save_representative(new_representative_name)
                 current_gen_species[last_gen_species_idx]["REPRESENTATIVE"] = new_representative_name
                 current_gen_species[last_gen_species_idx]["MEMBERS"]        = []#the representative will be added automatically. 
+                current_gen_species[last_gen_species_idx]["SCORE"]          = None
                 #(In theory it is possible that the representative of a species is appended to another species, but that is a problem for another day.)
         return current_gen_species
     else:
         print("No seperate Species declared...\n")
         current_gen_species = {}
         representative_name = random.choice(utils.load_bot_names())
-        current_gen_species["0"]={"REPRESENTATIVE":representative_name,"MEMBERS":[]} #first species
+        current_gen_species["0"]={"REPRESENTATIVE":representative_name,"MEMBERS":[],"SCORE":None} #first species
         utils.save_representative(representative_name)
         return current_gen_species
 
@@ -67,6 +68,9 @@ def speciation (bots,pop_size,c1=2,c2=2,c3=0.3,compat_thresh=5,species_dict = {}
         and then passed to the speciation function for the next generation.
         For the first generation the species dictionary is empty
         and there is only one species as all bots are equal
+        
+        The lower the compatibility threshold is the more new species are generated.
+        Delta is like the radius of the species representative. Everything in that radius is assigned to the species.
     """
     assert type(species_dict)==dict,"Representative Genome was not passed as a dictionary but as {}".format(type(represent))
     assert [len(species["MEMBERS"]) == 0 for species_key,species in species_dict.items()], "Not all species are empty!"
@@ -81,7 +85,7 @@ def speciation (bots,pop_size,c1=2,c2=2,c3=0.3,compat_thresh=5,species_dict = {}
             minimum_free_species_idx = min(list(set(range(max(species_idx_list)+2))-set(species_idx_list))) #all indexes that are not in the dictionary
             #"why +2?" one may ask. +1 in case all indexes are taken and another +1 bc of how the range function works 
             bot.species = str(minimum_free_species_idx)
-            species_dict[str(minimum_free_species_idx)] = {"REPRESENTATIVE":bot.name,"MEMBERS":[bot.name]} #new species with bot as representative
+            species_dict[str(minimum_free_species_idx)] = {"REPRESENTATIVE":bot.name,"MEMBERS":[bot.name],"SCORE":None} #new species with bot as representative
             utils.save_representative(bot.name)
             
 
@@ -89,37 +93,53 @@ def speciation (bots,pop_size,c1=2,c2=2,c3=0.3,compat_thresh=5,species_dict = {}
     for species_idx,species in species_dict.items():
         gen_members.extend(species["MEMBERS"])
     assert len(gen_members) == pop_size, f"Species dictionary contains the wrong amount of bots: {len(gen_members)}, \n{[bot.name for bot in bots if bot.name not in gen_members]} were not speciated."
-        
-    
 
     return species_dict
    
    
    
-def fitness (bots,species = {}):
+def fitness (bots,species = {},diagnose_fitness_function=False):
     """
     ______
     Input:
         An average score estimate
         the amount of specimen in the same species
     ______
-    Output:
+    Output:;
         Nothing
         Assigns the adjusted fitness to each bot
     ______
         It might be advantagous to add some to the score of the bot
         Otherwise a negative score might be improved if the bot is inside a large species
     """
+    bot_score_dict = diagnostics.bot_scores(0)
+    if (negative_score_offset:=min([score for bot,score in bot_score_dict.items()])):# plus edge case st. fitness is working when score is negative
+        for bot,score in bot_score_dict.items():
+            bot_score_dict[bot]=score+abs(negative_score_offset)
     
+    max_score = max([score for bot,score in bot_score_dict.items()])
+            
     for bot in bots:
-        bot_score,alpha = diagnostics.score_estim(2,bot.name) #2 is the width of the confidence band around the estim
-        assert alpha < 0.5, "The score estimate for {} is insignificant at a level of {}".format(bot.name,alpha) #check whether the estimate is reliable
-        bot.fitness = (bot_score) / len(species[bot.species]["MEMBERS"]) #fitness fn as defined in the paper plus 400 st. fitness is not negative
-        if bot.fitness <0:
-            bot.fitness = 1
+        bot_score = bot_score_dict[bot.name]
+        assert bot_score >=0, f"Bot Score is below zero {bot_score}"
+        species_adjusted_score= np.exp(5*bot_score/max_score) / (1+0.1*len(species[bot.species]["MEMBERS"]))
+        bot.fitness = species_adjusted_score #fitness fn not as defined in the paper
 
 
-def species_allocation(bots,species_dict,pop_size):
+        assert bot.fitness >= 0, f"Negative Fitness in {bot.name}"       
+    
+    if diagnose_fitness_function:
+        print(negative_score_offset)
+        score_fitness=[(bot.fitness,bot_score_dict[bot.name]) for bot in bots]
+        score_fitness.sort(key= lambda x:x[1])
+        import matplotlib.pyplot as plt
+        plt.plot([score_fitness_tuple[0] for score_fitness_tuple in score_fitness],label="Fitness")
+        plt.plot([score_fitness_tuple[1] for score_fitness_tuple in score_fitness],label="Score")
+        plt.legend()
+        plt.show()
+        input()
+
+def species_allocation(bots,species_dict,pop_size,improvement_timer):
     """
     ______
     Input:
@@ -130,17 +150,43 @@ def species_allocation(bots,species_dict,pop_size):
     Output:
         a dictionary that assigns species size to each 
         species according to its performance
+    ______
+        Species that havent improved in a long time are allocated zero members
     """
 
     print(f"Population Size is {pop_size}, allocating to species...")
     
-    
     species_sizes ={}
     pop_fitness_sum = sum([bot.fitness for bot in bots])
+    
+    species_dict_list = utils.load_all_species()
+    
     
     for species_idx,species in species_dict.items():
         species_fitness_sum = sum([bot.fitness for bot in bots if bot.species == species_idx])
         species_sizes[species_idx] = int(np.round(pop_size * (species_fitness_sum/pop_fitness_sum)))
+        
+        species_history = [gen_species_dict[species_idx] if species_idx in gen_species_dict.keys() 
+                                                         else {"REPRESENTATIVE":"NOTREPRESENTED","MEMBERS":[],"SCORE":None} 
+                                                         for gen_idx,gen_species_dict in species_dict_list.items()]
+        """
+        Because the species index does not uniquely represent the species as it currently exists,
+        the history has to whether there existed a previous species with the same index that has died out.
+        The above command inserts a dummy empty species in the history to make this possible.
+        """
+        species_conception = 0
+        if (extinct:=[idx for idx,gen_species in enumerate(species_history) if len(gen_species["MEMBERS"])==0]): #the species was extinct at some point
+            species_conception = max(extinct)+1 #the point in time right after the last extinction
+        #i.e. the last point in time when the size of the species went from zero to above zero
+        species_history = species_history[species_conception:]
+
+        
+        species_perfomance_improvement = [gen["SCORE"] for gen in species_history]
+        if improvement_timer < len(species_perfomance_improvement):
+            if species_perfomance_improvement[-improvement_timer] >= max(species_perfomance_improvement[improvement_timer:]):
+                if not species_dict[species_idx]["SCORE"] == max([species["SCORE"] for species_idx,species in species_dict.items()]):#dont want to kill off the best species
+                    species_sizes[species_idx] = 0
+                    print(f"Eliminated Species {species_idx}")
     
     while sum([species_size for species_idx,species_size in species_sizes.items()]) > pop_size: #population is oversize
         rs_idx,rs_size = random.choice(list(species_sizes.items()))
@@ -184,7 +230,7 @@ def mutate_link(nn_node_genome,nn_connection_genome,net_type):
     
     link_mutation = {"IN": random.choice(nn_node_genome)["INDEX"],
                      "OUT":random.choice(output_nodes_idx+hidden_nodes_idx),
-                     "WEIGHT": np.random.normal(size = 1)[0],
+                     "WEIGHT": 0,
                      "ENABLED":1,
                      "INNOVATION":utils.increment_in(net_type)}
 
@@ -200,7 +246,7 @@ def mutate_link(nn_node_genome,nn_connection_genome,net_type):
             print(f"Connection {link_mutation['IN']} --> {link_mutation['OUT']} not added to genome. Connection already exists at innovation {gene['INNOVATION']}")
             return nn_connection_genome,None
 
-    print(f"Connection {link_mutation['IN']} --> {link_mutation['OUT']} added to genome.")
+    #print(f"Connection {link_mutation['IN']} --> {link_mutation['OUT']} added to genome.")
     
     nn_connection_genome.append(link_mutation)
     return nn_connection_genome,link_mutation
@@ -231,7 +277,7 @@ def mutate_node(nn_node_genome,nn_connection_genome,net_type):
     #the index of the last added node
     #(could also be len(nn_node_genome) but this is constant time)
 
-    nn_node_genome.append(new_node:={"INDEX" : n_nodes+1, "TYPE" : "HIDDEN","BIAS" : np.random.normal(size = 1)[0]})
+    nn_node_genome.append(new_node:={"INDEX" : n_nodes+1, "TYPE" : "HIDDEN","BIAS" : 0})
 
     target_link_idx = np.random.randint(len(nn_connection_genome))
     target_link     = nn_connection_genome[target_link_idx]
@@ -239,19 +285,19 @@ def mutate_node(nn_node_genome,nn_connection_genome,net_type):
     
     in_connection,out_connection =  ({"IN": target_link["IN"],
                                      "OUT":new_node["INDEX"],
-                                     "WEIGHT":np.random.normal(size = 1)[0],
+                                     "WEIGHT":nn_connection_genome[target_link_idx]["WEIGHT"],
                                      "ENABLED":1,
                                      "INNOVATION":utils.increment_in(net_type)},
                                      {"IN": new_node["INDEX"],
                                      "OUT":target_link["OUT"],
-                                     "WEIGHT":np.random.normal(size = 1)[0],
+                                     "WEIGHT":0,
                                      "ENABLED":1,
                                      "INNOVATION":utils.increment_in(net_type)})
     
     nn_connection_genome.append(in_connection)
     nn_connection_genome.append(out_connection)
 
-    print("Added a new node: ",new_node)
+    #print("Added a new node: ",new_node)
     
     return nn_node_genome,nn_connection_genome,in_connection,out_connection
 
@@ -279,12 +325,12 @@ def mutate_weights(connection_genome,node_genome,random_weight_thresh,pert_rate)
             connection_genome[gene_idx]["WEIGHT"] += np.random.normal(loc=0,scale=pert_rate,size = 1)[0] #the paper says "uniformly perturbed" but its not exactly defined how
 
     for gene_idx,random_mutation in enumerate(random_node_mutation_list):
-        if random_mutation:
+        if random_mutation and node_genome[gene_idx]["TYPE"]!="SENSOR":
             node_genome[gene_idx]["BIAS"]  = np.random.normal(size = 1)[0]
-        else:
+        elif node_genome[gene_idx]["TYPE"]!="SENSOR":
             node_genome[gene_idx]["BIAS"] += np.random.normal(loc=0,scale=pert_rate,size = 1)[0] #the paper says "uniformly perturbed" but its not exactly defined how
 
-    print("Weights and Biases mutated.")
+    #print("Weights and Biases mutated.")
     
     return connection_genome
 

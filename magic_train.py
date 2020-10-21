@@ -85,7 +85,6 @@ def play_single_round(game_pool,round_idx=14):
 
     for player in game_pool:
         utils.add_seperate_score(player.name,player.game_score)
-    print(game_pool)
     
     return
 
@@ -102,7 +101,8 @@ def scrape_pool(n_cores,above_alpha):
         time taken to scrape all scores
     ______
         all bots have their seperate scores combined into one main score file
-    """     
+    """
+    print(f"Scraping {len(above_alpha)} Scores")
     start_time = time.time()
     with multiprocessing.Pool(n_cores) as p:
         p.map(utils.scrape_scores,above_alpha)
@@ -165,7 +165,7 @@ def use_multi_core(bots,width=10,alpha_thresh=0.1):
             return above_alpha #hacky catch number one
         
         average_alpha = np.mean([tuple[0][1] for tuple in score_estim_list])
-        n_games = min([100,int(np.ceil((average_alpha-alpha_thresh)*25/average_alpha)+50)])#a rough estimate, can be made more precise
+        n_games = min([int(np.ceil(average_alpha/alpha_thresh**3)+50)])#a rough estimate, can be made more precise
 
         if n_games<10:
             n_games=10 #hacky catch number two
@@ -185,7 +185,6 @@ def use_multi_core(bots,width=10,alpha_thresh=0.1):
 
         print(f"All bots play {n_games} games")
         game_time = play_pool(n_cores,pool_list)
-        print(f"Scraping {len(above_alpha)} Scores")
         scrape_time = scrape_pool(n_cores,above_alpha)
         utils.save_time_performance(gen_idx=utils.current_gen(),n_games=n_games,pool_size=len(above_alpha),game_time=game_time,scrape_time=scrape_time,n_cores=n_cores)
     
@@ -211,40 +210,33 @@ def play_to_significance(bots,width=10,alpha_thresh=0.1):
     """
     
     above_alpha = use_multi_core(bots,width,alpha_thresh)
-                
-
-    #The last three bots play with bots that are already significant
-    while above_alpha:
-        
-        for bot in above_alpha:
-            mean,alpha = diagnostics.score_estim(width,(above_bot := above_alpha[0]).name)  
-            if alpha<=alpha_thresh:
-                above_alpha.remove(above_bot)
-            else:
-                game_pool = above_alpha+bots[:4-len(above_alpha)]
-                print(above_bot,alpha)
-                
-                print(f"Afterburning")
-                for game_idx in range(5):
-                    play_game(game_pool)
-                
-                    #show how the score behaves over those games
-                    for player in game_pool:
-                        utils.add_score(player.name,player.game_score)
                         
     scrape_pool(multiprocessing.cpu_count(),bots)#scrape leftover scores
     
-    if [tuple[1] for tuple in diagnostics.bot_scores(width) if tuple[0][1] > alpha_thresh]:
+    score_tuples = [(diagnostics.score_estim(width,bot.name),bot.name) for bot in bots]
+    if [tuple[1] for tuple in score_tuples if tuple[0][1] > alpha_thresh]:
         play_to_significance(bots,width=width,alpha_thresh=alpha_thresh)
+        score_tuples = [(diagnostics.score_estim(width,bot.name),bot.name) for bot in bots]
         
-    assert not (insignificant_scores := ([tuple[1] for tuple in diagnostics.bot_scores(width) if tuple[0][1] > alpha_thresh])),f"{insignificant_scores} are left over!"
+    assert not (insignificant_scores := ([tuple[1] for tuple in score_tuples if tuple[0][1] > alpha_thresh])),f"{insignificant_scores} are left over!"
     
     
     print("Significance achieved")
     return True
 
 
-   
+
+def assign_scores_to_species(gen_idx):
+    """
+    assigns a species average score to the species dictionary
+    """
+    species_dict=utils.load_gen_species(gen_idx)
+    for species_idx,species in species_dict.items():
+        species_mean_score = np.mean([diagnostics.score_estim(1,botname)[0] for botname in species_dict[species_idx]["MEMBERS"]])
+        species_dict[species_idx]["SCORE"] = species_mean_score
+    utils.save_generation_species(gen_idx, species_dict)
+    return   
+
 
 
 def inquiry_step(gen_idx,bots,significance_width,significance_val):
@@ -268,13 +260,15 @@ def inquiry_step(gen_idx,bots,significance_width,significance_val):
     gen_max_score,max_score_bot = diagnostics.gen_max_score(significance_width,significance_val)
     gen_max_score_conf = diagnostics.conf_band_width(significance_val,max_score_bot)
     gen_avg_score = diagnostics.gen_avg_score(significance_width,significance_val)
-    utils.save_progress(gen_idx,gen_max_score,max_score_bot,gen_max_score_conf,gen_avg_score)#log process in case it wasnt last generation    
+    utils.save_progress(gen_idx,gen_max_score,max_score_bot,gen_max_score_conf,gen_avg_score)#log process in case it wasnt last generation
+    assign_scores_to_species(gen_idx)
+    diagnostics.population_progress(silent=True)
     
     return
 
 
 
-def progressive_step(gen_idx,bots,population_size,link_thresh,node_thresh,weights_mut_thresh,rand_weight_thresh,pert_rate,preservation_rate):
+def progressive_step(gen_idx,bots,population_size,link_thresh,node_thresh,weights_mut_thresh,rand_weight_thresh,pert_rate,preservation_rate,improvement_timer):
     """
     ______
     Input:
@@ -293,7 +287,7 @@ def progressive_step(gen_idx,bots,population_size,link_thresh,node_thresh,weight
     species_dict = utils.load_gen_species(gen_idx-1,assign_species = True, bots = bots)#if there is a dictionary
     species_dict = utils.clear_empty_species_from_dict(species_dict)
     fitness(bots = bots,species = species_dict)
-    species_sizes=species_allocation(bots=bots,species_dict=species_dict,pop_size=population_size)
+    species_sizes=species_allocation(bots=bots,species_dict=species_dict,pop_size=population_size,improvement_timer=improvement_timer)
     
     print("Spezies Sizes Dict: ", species_sizes)
 
@@ -339,7 +333,8 @@ def generation(gen_idx,
                weights_mut_thresh=0.8,
                rand_weight_thresh=0.1,
                pert_rate=0.1,
-               preservation_rate = 0.4):
+               preservation_rate = 0.4,
+               improvement_timer=10):
     """
     ______
     Input:
@@ -361,15 +356,16 @@ def generation(gen_idx,
         first generation idx should be one bc the initial species is 0
         
     """
-
+    
     bots = [Player(bot_name) for bot_name in utils.load_bot_names()]
     inquiry_step(gen_idx-1,bots,significance_width,significance_val)
-
-    progressive_step(gen_idx,bots,population_size,link_thresh,node_thresh,weights_mut_thresh,rand_weight_thresh,pert_rate,preservation_rate)
+    
+    
+    progressive_step(gen_idx,bots,population_size,link_thresh,node_thresh,weights_mut_thresh,rand_weight_thresh,pert_rate,preservation_rate,improvement_timer)
 
     bots = [Player(bot_name) for bot_name in utils.load_bot_names()]
     inquiry_step(gen_idx,bots,significance_width,significance_val)
-  
+    
     return
 
 
@@ -382,8 +378,8 @@ def start_training(significance_width,
                    weights_mut_thresh,
                    rand_weight_thresh,
                    pert_rate,
-                   preservation_rate):
-    
+                   preservation_rate,
+                   improvement_timer):
     current_gen = utils.current_gen()
 
     true_current_gen = utils.check_for_species_dict(current_gen)
@@ -398,8 +394,7 @@ def start_training(significance_width,
         print(f"Training generation {current_gen-1} to produce generation {current_gen}")
         generation(current_gen,
                    significance_width,significance_val,population_size,
-                   link_thresh,node_thresh,weights_mut_thresh,rand_weight_thresh,pert_rate,preservation_rate)
-
+                   link_thresh,node_thresh,weights_mut_thresh,rand_weight_thresh,pert_rate,preservation_rate,improvement_timer)
 
 
 
@@ -413,22 +408,31 @@ if __name__ == "__main__": #so it doesnt run when imported
     
     print(f"{multiprocessing.cpu_count()} cores available.")
     diagnostics.population_progress()
-    diagnostics.species_over_time(pop_size=100)
 
+    diagnostics.species_over_time(pop_size=500)
     for _ in range(2):
         diagnostics.graph(bots[_].name,'play')
         diagnostics.graph(bots[_].name,'bid')
         diagnostics.graph(bots[_].name,'stm')
+        diagnostics.score_hist(bots[_].name)
+  
     
-    scrape_pool(2,utils.load_bot_names())
+    scrape_pool(4,utils.load_bot_names())
     start_training(significance_val=0.25,
-                   significance_width=10,
-                   pert_rate=0.1,
-                   population_size=40,
-                   link_thresh=0.05,
-                   node_thresh=0.03,
+                   significance_width=2,
+                   pert_rate=0.3,
+                   population_size=500,
+                   link_thresh=0.01,
+                   node_thresh=0.005,
                    weights_mut_thresh=0.8,
-                   rand_weight_thresh=0.1,
-                   preservation_rate=0.5)
+                   rand_weight_thresh=0.05,
+                   preservation_rate=0.8,
+                   improvement_timer=5)
 
+"""
+if it dont work now:
+ 1.change perturbation rate to 0.3 or something ---> nah
+ 2.lower the mutation rate further --> 
+ 3.decrease c_3 in evolution more
 
+"""

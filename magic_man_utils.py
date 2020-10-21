@@ -269,6 +269,12 @@ def load_gen_species(gen_idx,assign_species=False,bots=None,directory = cwd):
     
     return species_obj[("GEN_"+str(gen_idx))]
 
+def load_all_species():
+    with open(cwd + r'\Bots\species.json','r') as species_file: 
+            species_dict_list = json.load(species_file)
+            species_file.close()
+    return species_dict_list
+
 def load_bot_genome(bot_name,directory= (cwd+r'\Bots' )):
     if type(bot_name)!=str:
         print(f"{str(bot_name)} not string type: {type(bot_name)}")
@@ -327,12 +333,18 @@ def load_innovation_number(nn_type,directory=cwd):
 
 
             
-def add_score (bot_name,add_score,directory=cwd):
+def add_score (bot_name,add_score,multiple_scores=False,directory=cwd):
     try:
         with open(directory + r'\Bots\{}\score.json'.format(bot_name),'r')as score_file: #open mode 'r' read 
             score_obj = json.load(score_file)  
             score_file.close()
-        score_obj["SCORE"].append(add_score)
+            
+        
+        if not multiple_scores:
+            score_obj["SCORE"].append(add_score)
+        else:
+            score_obj["SCORE"].extend(add_score)
+            
         with open(directory + r'\Bots\{}\score.json'.format(bot_name),'w')as score_file: #open mode 'w' to write - there has to be a better way
             json.dump(score_obj,score_file)
             score_file.close()
@@ -341,7 +353,9 @@ def add_score (bot_name,add_score,directory=cwd):
             
     except Exception as exception:
         print(f"Saving {bot_name}'s additional score failed: {exception}")
-        
+        return
+   
+   
    
 def add_seperate_score(bot_name,add_score,directory=cwd):
     """
@@ -357,7 +371,7 @@ def add_seperate_score(bot_name,add_score,directory=cwd):
     if not os.path.exists(directory + r'\Bots\{}'.format(bot_name)):
         os.mkdir(directory + r'\Bots\{}'.format(bot_name))
     try:
-        filename=("SCORE_"+str(time.time())).replace('.','')
+        filename=("SCORE_"+str(np.random.randint(0,1000))+str(time.time())).replace('.','')#added random int bc sometimes the same score is saved twice.
         with open(directory + r'\Bots\{}\{}.json'.format(bot_name,filename),'x') as score_file: #open mode 'x' creates a file and fails if it already exists
             json.dump({"SCORE":[add_score]},score_file)#seperate score is saved in a dict
         return
@@ -380,7 +394,8 @@ def scrape_scores(bot_name,directory=cwd):
         
         !!dont forget to check the profiler this might cost too much time!!
     """
-    print(f"Scraping {bot_name}'s scores")
+    
+    #print(f"Scraping {bot_name}'s scores")
     
     bot_dir = os.listdir(cwd + f'\Bots\{bot_name}')
     score_files = [scorefile for scorefile in bot_dir if "SCORE_" in scorefile]
@@ -392,14 +407,16 @@ def scrape_scores(bot_name,directory=cwd):
                 bot_scores.append(json.load(score_file)["SCORE"][0])
             os.remove(directory + f'\Bots\{bot_name}\{score_file_name}')  
             
-        for score in bot_scores:
-            add_score(bot_name,score)
+        add_score(bot_name,bot_scores,multiple_scores=True)
+        return
         
     except Exception as exception:#if the integrity of the botfile is compromised its important to know in which bot it is
         print(f"Scraping{bot_name}'s score failed: {exception}")
         sys.exit(f"{bot_name}'s score file is inaccessable.") 
-    
-    pass
+
+
+
+
     
    
 def increment_in(nn_type,directory=cwd):
@@ -683,7 +700,8 @@ def incinerate(bot_name,directory=cwd+'\Bots'):
     
     try:
         shutil.rmtree(directory + f'\{bot_name}')
-        print(f"Incinerated {bot_name}.")
+        
+        #print(f"Incinerated {bot_name}.")
     except Exception as exception:
         print(f"Incinerating {bot_name} failed: {exception}") 
         return False
