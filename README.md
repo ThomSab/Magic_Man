@@ -25,13 +25,13 @@ Playing a game now takes about 0.5 to 1.5 seconds longer. Depending on the impro
 ## Results
 
 The NEAT algorithm so far has perfomed considerably worse than the fixed topology approach.
-While the fixed topology neural nets stalled at about 70 points average score the neural nets trained with NEAT stalled at negative 50.
+While the fixed topology neural nets stalled at about 70 points average score the neural nets trained with NEAT stopped improving around 40.
 
-![Score Progress](https://user-images.githubusercontent.com/64082072/94849521-d5129d00-0425-11eb-82ff-94656e5a7f0c.png)
+![Score Progress](https://user-images.githubusercontent.com/64082072/97228737-a34be680-17d7-11eb-8fac-f51bf3077475.png)
 
-The bots started with full connectivity as described in the reference paper, i.e. every sensor node is connected to every output node.
-I suspect that this might be a serious disadvantage because a completely disconnected net performes much better.
-If there are no connections between the sensors and the output at all, average score is about 8.
+The bots were started without full connectivity as described in the reference paper, i.e. instead of every sensor node being connected to every output node, no connections were there to begin with.
+The completely disconnected net performs much better.
+If there are is full connectivity between the sensors and the output nodes, average score stalls at about negative 50.
 
 ## Speciation 
 
@@ -41,3 +41,24 @@ Speciation works almost perfectly. It is more volatile than the reference papers
 
 The compatibility threshold δ is set to 2.25, C<sub>1</sub> and C<sub>2</sub> are set to 2, and C<sub>3</sub> is set to 0.7
 As in the reference paper there are no particular reasons for these values and they are set through trial and error.
+
+## Neural Nets
+
+The bid nets in some cases formed sensible patterns.
+
+![Bid Net Evolution](https://user-images.githubusercontent.com/64082072/97228712-99c27e80-17d7-11eb-8079-c31d19b4f166.png)
+
+The figure shows the topmost nodes to increase the bid nets output node.
+The nodes correspond to the 4 magicians, which almost always win a trick.
+Connections like these seem sensible and are evidence of the algorithm working as intended.
+
+![Play Net Evolution](https://user-images.githubusercontent.com/64082072/97228720-9d560580-17d7-11eb-8d82-053d943f63e8.png)
+
+The playing strategies are much less intuitive and therefore more complicated.
+The figure shows the net that determines which card the bot wants to play.
+I have serious doubts that this neural net is of any use whatsoever but I have not bothered comparing the bots performance to a similar bot with no connections in the play net.
+
+## Conclusion
+
+I either did not apply the NEAT algorithm correctly or the task is too comlicated for a net to evolve into a valid solution.
+I will try a fixed topology gradient descend method next.
