@@ -48,7 +48,7 @@ The bid nets in some cases formed sensible patterns.
 
 ![Bid Net Evolution](https://user-images.githubusercontent.com/64082072/97228712-99c27e80-17d7-11eb-8079-c31d19b4f166.png)
 
-The figure shows the topmost nodes to increase the bid nets output node.
+The figure shows the topmost nodes to increase the activation of the bid nets output node.
 The nodes correspond to the 4 magicians, which almost always win a trick.
 Connections like these seem sensible and are evidence of the algorithm working as intended.
 
