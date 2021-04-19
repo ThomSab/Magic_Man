@@ -60,5 +60,5 @@ I have serious doubts that this neural net is of any use whatsoever but I have n
 
 ## Conclusion
 
-I either did not apply the NEAT algorithm correctly or the task is too comlicated for a net to evolve into a valid solution.
-I will try a fixed topology gradient descend method next.
+Although the algorithm is in principle working as intended, the progress is severely bottlenecked because the activation of the neural nets is hard to parrallelize.
+This is because the nets have no fixed topology and can not easily be but into matrix operation form. Running the NEAT algorithm on GPU remains a project for the future.
